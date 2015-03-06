@@ -46,3 +46,14 @@ eclipse {
     }
 }
 
+repositories {
+    mavenLocal()
+    maven { url 'http://maven.conveyal.com/' }
+    mavenCentral()
+}
+
+dependencies {
+    compile (
+        "com.conveyal:osm-lib:0.1-SNAPSHOT"
+    )
+}
