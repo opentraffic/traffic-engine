@@ -72,12 +72,31 @@ public class StandaloneMain {
 
 		List<GPSPoint> gpsPoints = loadGPSPointsFromCSV("./data/cebu-1m-sorted.csv");
 
+		
+		te.speedSampleListener = new SpeedSampleListener(){
+			int n=0;
+			long lastTime = System.currentTimeMillis();
+			@Override
+			public void onSpeedSample(SpeedSample ss) {
+				n += 1;
+				
+				if(n%1000==0){
+					long time = System.currentTimeMillis();
+					double dt = (time-lastTime)/1000.0;
+					double rate = 1000/dt;
+					System.out.println( "rate:"+rate+" records/second");
+					System.out.println( n );
+					System.out.println( ss );
+					
+					lastTime=time;
+				}
+			}
+			
+		};
+		
 		for (GPSPoint gpsPoint : gpsPoints) {
 			te.update(gpsPoint);
 		}
-		//
-		//
-		// List<SpeedSample> speedSamples = te.digestTraces( traces);
 	}
 
 	private static List<GPSPoint> loadGPSPointsFromCSV(String string) throws IOException, ParseException {

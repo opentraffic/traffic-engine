@@ -14,15 +14,21 @@ public class GPSSegment {
 	private LineString geom;
 	GPSPoint p0;
 	GPSPoint p1;
+	public String vehicleId;
 
 	public GPSSegment(GPSPoint p0, GPSPoint p1) {
 		Coordinate[] coords = new Coordinate[2];
 		coords[0] = new Coordinate(p0.lon, p0.lat);
 		coords[1] = new Coordinate(p1.lon, p1.lat);
 		this.geom = new GeometryFactory().createLineString(coords);
+		
+		if(!p0.vehicleId.equals(p1.vehicleId)){
+			throw new IllegalArgumentException( "vehicle ids don't match" );
+		}
 
 		this.p0 = p0;
 		this.p1 = p1;
+		this.vehicleId = p0.vehicleId;
 	}
 
 	public Crossing getCrossing(TripLine tl) {

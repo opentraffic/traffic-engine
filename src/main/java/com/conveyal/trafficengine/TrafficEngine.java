@@ -30,7 +30,8 @@ public class TrafficEngine {
 	GeodeticCalculator gc = new GeodeticCalculator();
 	List<TripLine> triplines = new ArrayList<TripLine>();
 	Map<String,GPSPoint> lastPoint = new HashMap<String,GPSPoint>();
-	Map<String,Map<String,Crossing>> crossings = new HashMap<String, Map<String,Crossing>>();
+	Map<String,Map<Long,Crossing>> crossings = new HashMap<String, Map<Long,Crossing>>();
+	SpeedSampleListener speedSampleListener;
 
 	public void setStreets(OSM osm){
 		addTripLines( osm );
@@ -205,19 +206,35 @@ public class TrafficEngine {
 				continue;
 			}
 			
-			System.out.println(crossing);
+			// check if the traffic engine has a record for this vehicle's previous
+			// crossings
+			Map<Long,Crossing> wayToCrossing = crossings.get(gpsPoint.vehicleId);
+			if (wayToCrossing==null) {
+				wayToCrossing = new HashMap<Long, Crossing>();
+				crossings.put(gpsPoint.vehicleId, wayToCrossing);
+			}
 
-//			// check if the traffic engine has a record for this vehicle's previous
-//			// crossings
-//			if (!crossings.containsKey(gpsPoint.vehicleId)) {
-//				crossings.put(gpsPoint.vehicleId, new HashMap<String, Crossing>());
-//			}
-//
-//			// check if there's a previous tripline crossing on this way
-//			Crossing lastCrossing = crossings.get(gpsPoint.vehicleId).get(tl.wayId);
-//			if (lastCrossing == null) {
-//
-//			}
+			// check if there's a previous tripline crossing on this way
+			Crossing lastCrossing = wayToCrossing.get(tl.wayId);
+			if (lastCrossing != null) {
+				if(Math.abs(lastCrossing.tripline.index - crossing.tripline.index)==1){
+					double ds = crossing.tripline.dist - lastCrossing.tripline.dist; // meters
+					double dt = crossing.getTime() - lastCrossing.getTime(); // seconds
+					
+					// note the speed will be negative if the vehicle is traveling along the way
+					// in the reverse order of its nodes.
+					double speed = ds/dt; //meters per second
+					
+					SpeedSample ss = new SpeedSample( lastCrossing, crossing, speed );
+					
+					if(this.speedSampleListener != null){
+						this.speedSampleListener.onSpeedSample( ss );
+					}
+					//System.out.println( "vehicle "+gpsSegment.vehicleId+" completed segment "+crossing.tripline.index+" of way "+crossing.tripline.wayId+" at time "+crossing.getTime()+" with speed "+speed );
+				}
+			}
+			
+			wayToCrossing.put(tl.wayId, crossing);
 		}
 	}
 
