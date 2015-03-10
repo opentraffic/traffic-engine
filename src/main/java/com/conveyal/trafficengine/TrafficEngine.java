@@ -30,6 +30,7 @@ public class TrafficEngine {
 	GeodeticCalculator gc = new GeodeticCalculator();
 	List<TripLine> triplines = new ArrayList<TripLine>();
 	Map<String,GPSPoint> lastPoint = new HashMap<String,GPSPoint>();
+	Map<String,Map<String,Crossing>> crossings = new HashMap<String, Map<String,Crossing>>();
 
 	public void setStreets(OSM osm){
 		addTripLines( osm );
@@ -69,7 +70,7 @@ public class TrafficEngine {
 			double scale = (endIndex-startIndex)/wayLen; // topos/meter
 			
 			double intersection_margin = INTERSECTION_MARGIN_METERS * scale; // meters * topos/meter = topos
-			
+			int tlIndex = 0;
 			for(int i=0; i<way.nodes.length; i++){
 				Long nd = way.nodes[i];
 				if( i==0 || i==way.nodes.length-1 || intersections.contains(nd) ){
@@ -78,14 +79,16 @@ public class TrafficEngine {
 					
 					double preIndex = ptIndex - intersection_margin;
 					if(preIndex >= startIndex){
-						TripLine tl = genTripline(wayId, nd, indexedWayPath, scale, preIndex);
+						TripLine tl = genTripline(wayId, nd, indexedWayPath, scale, preIndex, tlIndex);
 						triplines.add(tl);
+						tlIndex += 1;
 					}
 					
 					double postIndex = ptIndex + intersection_margin;
 					if(postIndex <= endIndex){
-						TripLine tl = genTripline(wayId, nd, indexedWayPath, scale, postIndex);
+						TripLine tl = genTripline(wayId, nd, indexedWayPath, scale, postIndex, tlIndex);
 						triplines.add(tl);
+						tlIndex += 1;
 					}
 					
 				}
@@ -94,7 +97,7 @@ public class TrafficEngine {
 		}
 	}
 
-	private TripLine genTripline(long wayId, Long nd, LengthIndexedLine lil, double scale, double i1) {
+	private TripLine genTripline(long wayId, Long nd, LengthIndexedLine lil, double scale, double i1, int index) {
 		double l1Bearing = getBearing( lil, i1 );
 		
 		Coordinate p1 = lil.extractPoint(i1);
@@ -104,7 +107,7 @@ public class TrafficEngine {
 		gc.setDirection(clampAzimuth(l1Bearing-90), TRIPLINE_RADIUS);
 		Point2D tlLeft = gc.getDestinationGeographicPoint();
 		
-		TripLine tl = new TripLine( tlRight, tlLeft, wayId, nd, i1/scale );
+		TripLine tl = new TripLine( tlRight, tlLeft, wayId, nd, i1/scale, index );
 		return tl;
 	}
 
@@ -194,25 +197,28 @@ public class TrafficEngine {
 		}
 		
 		// see which triplines the line segment p0 -> gpsPoint crosses
-		LineString gpsSegment = makeSegment( p0, gpsPoint );
+		GPSSegment gpsSegment = new GPSSegment( p0, gpsPoint );
 		for(TripLine tl : this.triplines ){
-			if( tl.geom.crosses( gpsSegment ) ){
-				Geometry crossingGeom = tl.geom.intersection( gpsSegment );
-				if( !(crossingGeom instanceof Point) ){
-					continue;
-				}
-				Point crossing = (Point)crossingGeom;
-				
-				System.out.println( "vehicle "+gpsPoint.vehicleId+" crossed tripline "+tl );
+			Crossing crossing = gpsSegment.getCrossing( tl );
+			
+			if(crossing==null){
+				continue;
 			}
-		}
-	}
+			
+			System.out.println(crossing);
 
-	private LineString makeSegment(GPSPoint p0, GPSPoint gpsPoint) {
-		Coordinate[] coords = new Coordinate[2];
-		coords[0] = new Coordinate( p0.lon, p0.lat );
-		coords[1] = new Coordinate( gpsPoint.lon, gpsPoint.lat );
-		return new GeometryFactory().createLineString( coords );
+//			// check if the traffic engine has a record for this vehicle's previous
+//			// crossings
+//			if (!crossings.containsKey(gpsPoint.vehicleId)) {
+//				crossings.put(gpsPoint.vehicleId, new HashMap<String, Crossing>());
+//			}
+//
+//			// check if there's a previous tripline crossing on this way
+//			Crossing lastCrossing = crossings.get(gpsPoint.vehicleId).get(tl.wayId);
+//			if (lastCrossing == null) {
+//
+//			}
+		}
 	}
 
 }

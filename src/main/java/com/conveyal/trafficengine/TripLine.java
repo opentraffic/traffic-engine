@@ -9,12 +9,13 @@ import com.vividsolutions.jts.geom.Point;
 
 public class TripLine {
 
+	int index;
 	long wayId;
 	Long nd;
 	double dist;
 	LineString geom;
 
-	public TripLine(Point2D left, Point2D right, long wayId, Long nd, double dist) {
+	public TripLine(Point2D left, Point2D right, long wayId, Long nd, double dist, int index) {
 		GeometryFactory gf = new GeometryFactory();
 		
 		Coordinate[] coords = new Coordinate[2];
@@ -25,10 +26,11 @@ public class TripLine {
 		this.wayId = wayId;
 		this.nd = nd;
 		this.dist = dist;
+		this.index = index;
 	}
 	
 	public String toString(){
-		return "[Tripline way:"+wayId+"@"+dist+"]";
+		return "[Tripline way:"+wayId+" ix:"+index+"]";
 	}
 
 }
