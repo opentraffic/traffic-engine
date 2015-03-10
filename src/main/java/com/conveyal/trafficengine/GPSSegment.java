@@ -3,6 +3,7 @@ package com.conveyal.trafficengine;
 import java.util.HashMap;
 
 import com.vividsolutions.jts.geom.Coordinate;
+import com.vividsolutions.jts.geom.Envelope;
 import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.geom.GeometryFactory;
 import com.vividsolutions.jts.geom.LineString;
@@ -54,6 +55,10 @@ public class GPSSegment {
 		// segment duration in milliseconds
 
 		return p1.time - p0.time;
+	}
+
+	public Envelope getEnvelope() {
+		return geom.getEnvelopeInternal();
 	}
 
 }

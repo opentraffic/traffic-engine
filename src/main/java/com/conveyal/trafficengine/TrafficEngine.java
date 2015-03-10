@@ -21,6 +21,7 @@ import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.geom.GeometryFactory;
 import com.vividsolutions.jts.geom.LineString;
 import com.vividsolutions.jts.geom.Point;
+import com.vividsolutions.jts.index.quadtree.Quadtree;
 import com.vividsolutions.jts.linearref.LengthIndexedLine;
 import com.vividsolutions.jts.linearref.LocationIndexedLine;
 
@@ -32,6 +33,7 @@ public class TrafficEngine {
 	Map<String,GPSPoint> lastPoint = new HashMap<String,GPSPoint>();
 	Map<String,Map<Long,Crossing>> crossings = new HashMap<String, Map<Long,Crossing>>();
 	SpeedSampleListener speedSampleListener;
+	private Quadtree index = new Quadtree();
 
 	public void setStreets(OSM osm){
 		addTripLines( osm );
@@ -81,6 +83,7 @@ public class TrafficEngine {
 					double preIndex = ptIndex - intersection_margin;
 					if(preIndex >= startIndex){
 						TripLine tl = genTripline(wayId, nd, indexedWayPath, scale, preIndex, tlIndex);
+						index.insert( tl.getEnvelope(), tl );
 						triplines.add(tl);
 						tlIndex += 1;
 					}
@@ -88,6 +91,7 @@ public class TrafficEngine {
 					double postIndex = ptIndex + intersection_margin;
 					if(postIndex <= endIndex){
 						TripLine tl = genTripline(wayId, nd, indexedWayPath, scale, postIndex, tlIndex);
+						index.insert( tl.getEnvelope(), tl );
 						triplines.add(tl);
 						tlIndex += 1;
 					}
@@ -199,7 +203,11 @@ public class TrafficEngine {
 		
 		// see which triplines the line segment p0 -> gpsPoint crosses
 		GPSSegment gpsSegment = new GPSSegment( p0, gpsPoint );
-		for(TripLine tl : this.triplines ){
+		
+		List tripLines = index.query(gpsSegment.getEnvelope());
+		for(Object tlObj : tripLines ){
+			TripLine tl = (TripLine)tlObj;
+			
 			Crossing crossing = gpsSegment.getCrossing( tl );
 			
 			if(crossing==null){

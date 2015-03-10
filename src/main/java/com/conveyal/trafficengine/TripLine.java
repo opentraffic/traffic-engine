@@ -3,6 +3,7 @@ package com.conveyal.trafficengine;
 import java.awt.geom.Point2D;
 
 import com.vividsolutions.jts.geom.Coordinate;
+import com.vividsolutions.jts.geom.Envelope;
 import com.vividsolutions.jts.geom.GeometryFactory;
 import com.vividsolutions.jts.geom.LineString;
 import com.vividsolutions.jts.geom.Point;
@@ -31,6 +32,10 @@ public class TripLine {
 	
 	public String toString(){
 		return "[Tripline way:"+wayId+" ix:"+index+"]";
+	}
+
+	public Envelope getEnvelope() {
+		return geom.getEnvelopeInternal();
 	}
 
 }
