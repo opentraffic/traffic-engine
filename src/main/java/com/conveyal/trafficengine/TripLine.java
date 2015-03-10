@@ -26,5 +26,9 @@ public class TripLine {
 		this.nd = nd;
 		this.dist = dist;
 	}
+	
+	public String toString(){
+		return "[Tripline way:"+wayId+"@"+dist+"]";
+	}
 
 }

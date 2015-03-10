@@ -17,6 +17,7 @@ import com.conveyal.osmlib.Node;
 import com.conveyal.osmlib.OSM;
 import com.conveyal.osmlib.Way;
 import com.vividsolutions.jts.geom.Coordinate;
+import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.geom.GeometryFactory;
 import com.vividsolutions.jts.geom.LineString;
 import com.vividsolutions.jts.geom.Point;
@@ -28,6 +29,7 @@ public class TrafficEngine {
 	private static final double TRIPLINE_RADIUS = 10;
 	GeodeticCalculator gc = new GeodeticCalculator();
 	List<TripLine> triplines = new ArrayList<TripLine>();
+	Map<String,GPSPoint> lastPoint = new HashMap<String,GPSPoint>();
 
 	public void setStreets(OSM osm){
 		addTripLines( osm );
@@ -76,13 +78,13 @@ public class TrafficEngine {
 					
 					double preIndex = ptIndex - intersection_margin;
 					if(preIndex >= startIndex){
-						TripLine tl = genTripline(wayId, nd, indexedWayPath, scale, ptIndex, preIndex);
+						TripLine tl = genTripline(wayId, nd, indexedWayPath, scale, preIndex);
 						triplines.add(tl);
 					}
 					
 					double postIndex = ptIndex + intersection_margin;
 					if(postIndex <= endIndex){
-						TripLine tl = genTripline(wayId, nd, indexedWayPath, scale, ptIndex, postIndex);
+						TripLine tl = genTripline(wayId, nd, indexedWayPath, scale, postIndex);
 						triplines.add(tl);
 					}
 					
@@ -92,7 +94,7 @@ public class TrafficEngine {
 		}
 	}
 
-	private TripLine genTripline(long wayId, Long nd, LengthIndexedLine lil, double scale, double ll, double i1) {
+	private TripLine genTripline(long wayId, Long nd, LengthIndexedLine lil, double scale, double i1) {
 		double l1Bearing = getBearing( lil, i1 );
 		
 		Coordinate p1 = lil.extractPoint(i1);
@@ -102,7 +104,7 @@ public class TrafficEngine {
 		gc.setDirection(clampAzimuth(l1Bearing-90), TRIPLINE_RADIUS);
 		Point2D tlLeft = gc.getDestinationGeographicPoint();
 		
-		TripLine tl = new TripLine( tlRight, tlLeft, wayId, nd, ll/scale );
+		TripLine tl = new TripLine( tlRight, tlLeft, wayId, nd, i1/scale );
 		return tl;
 	}
 
@@ -184,9 +186,33 @@ public class TrafficEngine {
 		return ret;
 	}
 
-	public List<SpeedSample> digestTraces(List<GPSTrace> traces) {
-		List<SpeedSample> ret = new ArrayList<SpeedSample>();
-		return ret;
+	public void update(GPSPoint gpsPoint) {
+		GPSPoint p0 = lastPoint.get(gpsPoint.vehicleId);
+		if( p0 == null ){
+			lastPoint.put( gpsPoint.vehicleId, gpsPoint );
+			return;
+		}
+		
+		// see which triplines the line segment p0 -> gpsPoint crosses
+		LineString gpsSegment = makeSegment( p0, gpsPoint );
+		for(TripLine tl : this.triplines ){
+			if( tl.geom.crosses( gpsSegment ) ){
+				Geometry crossingGeom = tl.geom.intersection( gpsSegment );
+				if( !(crossingGeom instanceof Point) ){
+					continue;
+				}
+				Point crossing = (Point)crossingGeom;
+				
+				System.out.println( "vehicle "+gpsPoint.vehicleId+" crossed tripline "+tl );
+			}
+		}
+	}
+
+	private LineString makeSegment(GPSPoint p0, GPSPoint gpsPoint) {
+		Coordinate[] coords = new Coordinate[2];
+		coords[0] = new Coordinate( p0.lon, p0.lat );
+		coords[1] = new Coordinate( gpsPoint.lon, gpsPoint.lat );
+		return new GeometryFactory().createLineString( coords );
 	}
 
 }

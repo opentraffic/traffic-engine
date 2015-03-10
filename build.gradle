@@ -56,6 +56,7 @@ repositories {
 dependencies {
     compile (
         "com.conveyal:osm-lib:0.1-SNAPSHOT",
-        "org.geotools:gt-referencing:12.2"
+        "org.geotools:gt-referencing:12.2",
+        "org.apache.commons:commons-csv:1.1"
     )
 }
