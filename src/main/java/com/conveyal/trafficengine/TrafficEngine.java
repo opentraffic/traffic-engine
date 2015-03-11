@@ -82,7 +82,7 @@ public class TrafficEngine {
 					
 					double preIndex = ptIndex - intersection_margin;
 					if(preIndex >= startIndex){
-						TripLine tl = genTripline(wayId, nd, indexedWayPath, scale, preIndex, tlIndex);
+						TripLine tl = genTripline(wayId, i, tlIndex, indexedWayPath, scale, preIndex);
 						index.insert( tl.getEnvelope(), tl );
 						triplines.add(tl);
 						tlIndex += 1;
@@ -90,7 +90,7 @@ public class TrafficEngine {
 					
 					double postIndex = ptIndex + intersection_margin;
 					if(postIndex <= endIndex){
-						TripLine tl = genTripline(wayId, nd, indexedWayPath, scale, postIndex, tlIndex);
+						TripLine tl = genTripline(wayId, i, tlIndex, indexedWayPath, scale, postIndex);
 						index.insert( tl.getEnvelope(), tl );
 						triplines.add(tl);
 						tlIndex += 1;
@@ -102,17 +102,17 @@ public class TrafficEngine {
 		}
 	}
 
-	private TripLine genTripline(long wayId, Long nd, LengthIndexedLine lil, double scale, double i1, int index) {
-		double l1Bearing = getBearing( lil, i1 );
+	private TripLine genTripline(long wayId, int ndIndex, int tlIndex, LengthIndexedLine lil, double scale, double lengthIndex ) {
+		double l1Bearing = getBearing( lil, lengthIndex );
 		
-		Coordinate p1 = lil.extractPoint(i1);
+		Coordinate p1 = lil.extractPoint(lengthIndex);
 		gc.setStartingGeographicPoint(p1.x, p1.y);
 		gc.setDirection(clampAzimuth(l1Bearing+90), TRIPLINE_RADIUS);
 		Point2D tlRight = gc.getDestinationGeographicPoint();
 		gc.setDirection(clampAzimuth(l1Bearing-90), TRIPLINE_RADIUS);
 		Point2D tlLeft = gc.getDestinationGeographicPoint();
 		
-		TripLine tl = new TripLine( tlRight, tlLeft, wayId, nd, i1/scale, index );
+		TripLine tl = new TripLine( tlRight, tlLeft, wayId, ndIndex, tlIndex, lengthIndex/scale );
 		return tl;
 	}
 
@@ -229,7 +229,7 @@ public class TrafficEngine {
 			// check if there's a previous tripline crossing on this way
 			Crossing lastCrossing = wayToCrossing.get(tl.wayId);
 			if (lastCrossing != null) {
-				if(Math.abs(lastCrossing.tripline.index - crossing.tripline.index)==1){
+				if(Math.abs(lastCrossing.tripline.ndIndex - crossing.tripline.ndIndex)==1){
 					double ds = crossing.tripline.dist - lastCrossing.tripline.dist; // meters
 					double dt = crossing.getTime() - lastCrossing.getTime(); // seconds
 					

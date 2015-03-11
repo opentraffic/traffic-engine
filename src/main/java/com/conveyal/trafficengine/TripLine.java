@@ -10,13 +10,13 @@ import com.vividsolutions.jts.geom.Point;
 
 public class TripLine {
 
-	int index;
 	long wayId;
-	Long nd;
+	int ndIndex;
+	int tlIndex;
 	double dist;
 	LineString geom;
 
-	public TripLine(Point2D left, Point2D right, long wayId, Long nd, double dist, int index) {
+	public TripLine(Point2D left, Point2D right, long wayId, int ndIndex, int tlIndex, double dist) {
 		GeometryFactory gf = new GeometryFactory();
 		
 		Coordinate[] coords = new Coordinate[2];
@@ -25,13 +25,13 @@ public class TripLine {
 		this.geom = gf.createLineString(coords);
 		
 		this.wayId = wayId;
-		this.nd = nd;
+		this.ndIndex = ndIndex;
+		this.tlIndex = tlIndex;
 		this.dist = dist;
-		this.index = index;
 	}
 	
 	public String toString(){
-		return "[Tripline way:"+wayId+" ix:"+index+"]";
+		return "[Tripline way:"+wayId+" tlix:"+tlIndex+"]";
 	}
 
 	public Envelope getEnvelope() {
