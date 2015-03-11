@@ -33,22 +33,23 @@ public class GPSSegment {
 	}
 
 	public Crossing getCrossing(TripLine tl) {
-		if (!tl.geom.crosses(this.geom)) {
+		Double percIntersection = this.getLineSegment().intersectionDistance( tl.getLineSegment() );
+		
+		if( percIntersection == null ){
 			return null;
 		}
-
-		Geometry crossingGeom = tl.geom.intersection(this.geom);
-		if (!(crossingGeom instanceof Point)) {
+		
+		if( percIntersection < 0 || percIntersection > 1 ){
 			return null;
 		}
-
-		Point crossingPoint = (Point) crossingGeom;
-		LengthIndexedLine lil = new LengthIndexedLine(tl.geom);
-		double lengthIndex = lil.project(crossingPoint.getCoordinate());
-		double percentageIndex = lengthIndex / tl.geom.getLength();
-		long time = (long) (this.getDuration() * percentageIndex + p0.time);
+		
+		long time = (long) (this.getDuration() * percIntersection + p0.time);
 
 		return new Crossing(this, tl, time);
+	}
+
+	private LineSegment getLineSegment() {
+		return new LineSegment( new Coordinate(p0.lon,p0.lat), new Coordinate(p1.lon,p1.lat) );
 	}
 
 	private long getDuration() {
@@ -59,6 +60,10 @@ public class GPSSegment {
 
 	public Envelope getEnvelope() {
 		return geom.getEnvelopeInternal();
+	}
+
+	public boolean isStill() {
+		return p0.lat==p1.lat && p0.lon==p1.lon;
 	}
 
 }

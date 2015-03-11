@@ -38,4 +38,8 @@ public class TripLine {
 		return geom.getEnvelopeInternal();
 	}
 
+	public LineSegment getLineSegment() {
+		return new LineSegment( geom.getCoordinateN(0), geom.getCoordinateN(1) );
+	}
+
 }

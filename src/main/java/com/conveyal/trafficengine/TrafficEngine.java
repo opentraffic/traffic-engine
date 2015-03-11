@@ -196,13 +196,17 @@ public class TrafficEngine {
 
 	public void update(GPSPoint gpsPoint) {
 		GPSPoint p0 = lastPoint.get(gpsPoint.vehicleId);
+		lastPoint.put( gpsPoint.vehicleId, gpsPoint );
 		if( p0 == null ){
-			lastPoint.put( gpsPoint.vehicleId, gpsPoint );
 			return;
 		}
 		
 		// see which triplines the line segment p0 -> gpsPoint crosses
 		GPSSegment gpsSegment = new GPSSegment( p0, gpsPoint );
+		
+		if(gpsSegment.isStill()){
+			return;
+		}
 		
 		List tripLines = index.query(gpsSegment.getEnvelope());
 		for(Object tlObj : tripLines ){

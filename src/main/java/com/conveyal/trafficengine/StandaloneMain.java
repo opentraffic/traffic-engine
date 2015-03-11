@@ -86,7 +86,7 @@ public class StandaloneMain {
 					double rate = 1000/dt;
 					System.out.println( "rate:"+rate+" records/second");
 					System.out.println( n );
-					System.out.println( ss );
+					//System.out.println( ss );
 					
 					lastTime=time;
 				}
@@ -94,7 +94,12 @@ public class StandaloneMain {
 			
 		};
 		
+		int j=0;
 		for (GPSPoint gpsPoint : gpsPoints) {
+			j++;
+			if(j%1000==0){
+				System.out.println(String.format("%d/%d gps point read", j, gpsPoints.size()));
+			}
 			te.update(gpsPoint);
 		}
 	}
