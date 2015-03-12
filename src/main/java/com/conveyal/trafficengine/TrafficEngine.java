@@ -35,7 +35,7 @@ public class TrafficEngine {
 	ConcurrentNavigableMap<SampleBucketKey, SampleBucket> meansMap;
 	
 	public TrafficEngine(){
-		stats = DBMaker.newMemoryDB().make();
+		stats = DBMaker.newMemoryDB().transactionDisable().make();
 		meansMap = stats.getTreeMap("means");
 	}
 
@@ -271,7 +271,7 @@ public class TrafficEngine {
 	private void updateStats(SpeedSample ss) {
 		SampleBucketKey kk = new SampleBucketKey(ss);
 		
-		SampleBucket sb = meansMap.get( kk );
+		SampleBucket sb = meansMap.get(kk);
 		if(sb == null) {
 			sb = new SampleBucket();
 		}
