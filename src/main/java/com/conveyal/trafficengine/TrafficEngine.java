@@ -32,7 +32,7 @@ public class TrafficEngine {
 	List<TripLine> triplines = new ArrayList<TripLine>();
 	Map<String,GPSPoint> lastPoint = new HashMap<String,GPSPoint>();
 	Map<String,Map<Long,Crossing>> crossings = new HashMap<String, Map<Long,Crossing>>();
-	SpeedSampleListener speedSampleListener;
+	public SpeedSampleListener speedSampleListener;
 	private Quadtree index = new Quadtree();
 
 	public void setStreets(OSM osm){
