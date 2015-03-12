@@ -65,11 +65,9 @@ public class TrafficEngine {
 			// find topological units per meter
 			double scale = (endIndex - startIndex) / wayLen; // topos/meter
 
-			double intersection_margin = INTERSECTION_MARGIN_METERS * scale; // meters
-																				// *
-																				// topos/meter
-																				// =
-																				// topos
+			// meters * topos/meter = topos
+			double intersection_margin = INTERSECTION_MARGIN_METERS * scale; 
+			
 			int tlIndex = 0;
 			for (int i = 0; i < way.nodes.length; i++) {
 				Long nd = way.nodes[i];
