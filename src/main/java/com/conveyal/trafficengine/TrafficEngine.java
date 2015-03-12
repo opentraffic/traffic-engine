@@ -8,8 +8,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.ConcurrentNavigableMap;
 
 import org.geotools.referencing.GeodeticCalculator;
+import org.mapdb.DB;
+import org.mapdb.DBMaker;
 
 import com.conveyal.osmlib.OSM;
 import com.conveyal.osmlib.Way;
@@ -28,6 +31,13 @@ public class TrafficEngine {
 	Map<String, Map<Long, Crossing>> crossings = new HashMap<String, Map<Long, Crossing>>();
 	public SpeedSampleListener speedSampleListener;
 	private Quadtree index = new Quadtree();
+	DB stats;
+	ConcurrentNavigableMap<SampleBucketKey, SampleBucket> meansMap;
+	
+	public TrafficEngine(){
+		stats = DBMaker.newMemoryDB().make();
+		meansMap = stats.getTreeMap("means");
+	}
 
 	public void setStreets(OSM osm) {
 		addTripLines(osm);
@@ -226,29 +236,48 @@ public class TrafficEngine {
 
 			// check if there's a previous tripline crossing on this way
 			Crossing lastCrossing = wayToCrossing.get(tl.wayId);
-			if (lastCrossing != null) {
-				if (Math.abs(lastCrossing.tripline.ndIndex - crossing.tripline.ndIndex) == 1) {
-					double ds = crossing.tripline.dist - lastCrossing.tripline.dist; // meters
-					double dt = crossing.getTime() - lastCrossing.getTime(); // seconds
-
-					// note the speed will be negative if the vehicle is
-					// traveling along the way
-					// in the reverse order of its nodes.
-					double speed = ds / dt; // meters per second
-
-					SpeedSample ss = new SpeedSample(lastCrossing, crossing, speed);
-
-					if (this.speedSampleListener != null) {
-						this.speedSampleListener.onSpeedSample(ss);
-					}
-					// System.out.println(
-					// "vehicle "+gpsSegment.vehicleId+" completed segment "+crossing.tripline.index+" of way "+crossing.tripline.wayId+" at time "+crossing.getTime()+" with speed "+speed
-					// );
-				}
+			wayToCrossing.put(tl.wayId, crossing);
+			
+			if(lastCrossing == null){
+				continue;
+			}
+			
+			if(Math.abs(lastCrossing.tripline.ndIndex - crossing.tripline.ndIndex) != 1) {
+				continue;
+			}
+			
+			double ds = crossing.tripline.dist - lastCrossing.tripline.dist; // meters
+			double dt = crossing.getTime() - lastCrossing.getTime(); // seconds
+			
+			if( dt==0 ){
+				continue;
 			}
 
-			wayToCrossing.put(tl.wayId, crossing);
+			// note the speed will be negative if the vehicle is
+			// traveling along the way
+			// in the reverse order of its nodes.
+			double speed = ds / dt; // meters per second
+
+			SpeedSample ss = new SpeedSample(lastCrossing, crossing, speed);
+
+			if (this.speedSampleListener != null) {
+				this.speedSampleListener.onSpeedSample(ss);
+			}
+			this.updateStats( ss );
+			
 		}
+	}
+
+	private void updateStats(SpeedSample ss) {
+		SampleBucketKey kk = new SampleBucketKey(ss);
+		
+		SampleBucket sb = meansMap.get( kk );
+		if(sb == null) {
+			sb = new SampleBucket();
+		}
+		sb.update( ss );
+		
+		meansMap.put(kk, sb);
 	}
 
 }
