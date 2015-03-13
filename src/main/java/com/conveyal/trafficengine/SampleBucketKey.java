@@ -65,5 +65,9 @@ public class SampleBucketKey implements Serializable, Comparable<SampleBucketKey
 		return 0;
 		
 	}
+	
+	public String toString(){
+		return "[bucket "+this.wayId+":"+this.startNodeIndex+"-"+this.endNodeIndex+" "+this.hourOfWeek+"]";
+	}
 
 }

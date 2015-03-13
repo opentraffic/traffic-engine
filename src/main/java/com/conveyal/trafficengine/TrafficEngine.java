@@ -2,6 +2,8 @@ package com.conveyal.trafficengine;
 
 import java.awt.geom.Point2D;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -214,16 +216,11 @@ public class TrafficEngine {
 		if (gpsSegment.isStill()) {
 			return;
 		}
+		
+		List<Crossing> segCrossings = getCrossingsInOrder(gpsSegment);
 
-		List<?> tripLines = index.query(gpsSegment.getEnvelope());
-		for (Object tlObj : tripLines) {
-			TripLine tl = (TripLine) tlObj;
-
-			Crossing crossing = gpsSegment.getCrossing(tl);
-
-			if (crossing == null) {
-				continue;
-			}
+		for (Crossing crossing : segCrossings) {
+			TripLine tl = crossing.tripline;
 
 			// check if the traffic engine has a record for this vehicle's
 			// previous
@@ -246,16 +243,19 @@ public class TrafficEngine {
 				continue;
 			}
 			
-			double ds = crossing.tripline.dist - lastCrossing.tripline.dist; // meters
+			// it may be useful to keep the displacement sign, but the order of the
+			// ndIndex associated with each tripline gives the direction anyway
+			double ds = Math.abs(crossing.tripline.dist - lastCrossing.tripline.dist); // meters
 			double dt = crossing.getTime() - lastCrossing.getTime(); // seconds
+			
+			if( dt < 0 ){
+				throw new RuntimeException( String.format("this crossing happened before %fs before the last crossing", dt) );
+			}
 			
 			if( dt==0 ){
 				continue;
 			}
 
-			// note the speed will be negative if the vehicle is
-			// traveling along the way
-			// in the reverse order of its nodes.
 			double speed = ds / dt; // meters per second
 
 			SpeedSample ss = new SpeedSample(lastCrossing, crossing, speed);
@@ -268,6 +268,39 @@ public class TrafficEngine {
 		}
 	}
 
+	private List<Crossing> getCrossingsInOrder(GPSSegment gpsSegment) {
+		
+		List<Crossing> ret = new ArrayList<Crossing>();
+		
+		List<?> tripLines = index.query(gpsSegment.getEnvelope());
+		for (Object tlObj : tripLines) {
+			TripLine tl = (TripLine) tlObj;
+
+			Crossing crossing = gpsSegment.getCrossing(tl);
+
+			if (crossing != null) {
+				ret.add( crossing );
+			}
+		}
+		
+		Collections.sort( ret, new Comparator<Crossing>(){
+
+			@Override
+			public int compare(Crossing o1, Crossing o2) {
+				if( o1.timeMillis < o2.timeMillis ){
+					return -1;
+				}
+				if( o1.timeMillis > o2.timeMillis ){
+					return 1;
+				}
+				return 0;
+			}
+			
+		});
+		
+		return ret;
+	}
+
 	private void updateStats(SpeedSample ss) {
 		SampleBucketKey kk = new SampleBucketKey(ss);
 		
@@ -278,6 +311,10 @@ public class TrafficEngine {
 		sb.update( ss );
 		
 		meansMap.put(kk, sb);
+	}
+
+	public Set<Entry<SampleBucketKey, SampleBucket>> statsSet() {
+		return this.meansMap.entrySet();
 	}
 
 }
