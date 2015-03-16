@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import com.vividsolutions.jts.geom.*;
 import org.geotools.referencing.GeodeticCalculator;
 import org.opengis.geometry.DirectPosition;
 import org.opengis.geometry.coordinate.Position;
@@ -16,11 +17,6 @@ import org.opengis.geometry.coordinate.Position;
 import com.conveyal.osmlib.Node;
 import com.conveyal.osmlib.OSM;
 import com.conveyal.osmlib.Way;
-import com.vividsolutions.jts.geom.Coordinate;
-import com.vividsolutions.jts.geom.Geometry;
-import com.vividsolutions.jts.geom.GeometryFactory;
-import com.vividsolutions.jts.geom.LineString;
-import com.vividsolutions.jts.geom.Point;
 import com.vividsolutions.jts.index.quadtree.Quadtree;
 import com.vividsolutions.jts.linearref.LengthIndexedLine;
 import com.vividsolutions.jts.linearref.LocationIndexedLine;
@@ -28,6 +24,9 @@ import com.vividsolutions.jts.linearref.LocationIndexedLine;
 public class TrafficEngine {
 	private static final double INTERSECTION_MARGIN_METERS = 10;
 	private static final double TRIPLINE_RADIUS = 10;
+
+	Envelope engineEnvelope = new Envelope();
+
 	GeodeticCalculator gc = new GeodeticCalculator();
 	List<TripLine> triplines = new ArrayList<TripLine>();
 	Map<String,GPSPoint> lastPoint = new HashMap<String,GPSPoint>();
@@ -39,12 +38,28 @@ public class TrafficEngine {
 		addTripLines( osm );
 	}
 
+	public Coordinate getCenterPoint() {
+		return engineEnvelope.centre();
+	}
+
+	public Envelope getBounds() {
+		return engineEnvelope;
+	}
+
+	public List<TripLine> getTripLines() {
+		return triplines;
+	}
+
+	public List<TripLine> getTripLines(Envelope env) {
+		return index.query(env);
+	}
+
 	private void addTripLines(OSM osm) {
 		// find intersection nodes
 		Set<Long> intersections = findIntersections(osm);
 		
 		System.out.println( String.format("%d intersections", intersections.size()));
-		
+
 		// for each way
 		// place intersection lines on both sides of intersections
 		for(Entry<Long, Way> wayEntry : osm.ways.entrySet() ){
@@ -78,6 +93,9 @@ public class TrafficEngine {
 				Long nd = way.nodes[i];
 				if( i==0 || i==way.nodes.length-1 || intersections.contains(nd) ){
 					Point pt = wayPath.getPointN(i);
+
+					engineEnvelope.expandToInclude(pt.getCoordinate());
+
 					double ptIndex = indexedWayPath.project( pt.getCoordinate() );
 					
 					double preIndex = ptIndex - intersection_margin;
