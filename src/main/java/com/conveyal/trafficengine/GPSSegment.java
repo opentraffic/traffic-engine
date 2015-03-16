@@ -1,14 +1,9 @@
 package com.conveyal.trafficengine;
 
-import java.util.HashMap;
-
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.Envelope;
-import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.geom.GeometryFactory;
 import com.vividsolutions.jts.geom.LineString;
-import com.vividsolutions.jts.geom.Point;
-import com.vividsolutions.jts.linearref.LengthIndexedLine;
 
 public class GPSSegment {
 
@@ -22,9 +17,9 @@ public class GPSSegment {
 		coords[0] = new Coordinate(p0.lon, p0.lat);
 		coords[1] = new Coordinate(p1.lon, p1.lat);
 		this.geom = new GeometryFactory().createLineString(coords);
-		
-		if(!p0.vehicleId.equals(p1.vehicleId)){
-			throw new IllegalArgumentException( "vehicle ids don't match" );
+
+		if (!p0.vehicleId.equals(p1.vehicleId)) {
+			throw new IllegalArgumentException("vehicle ids don't match");
 		}
 
 		this.p0 = p0;
@@ -33,23 +28,23 @@ public class GPSSegment {
 	}
 
 	public Crossing getCrossing(TripLine tl) {
-		Double percIntersection = this.getLineSegment().intersectionDistance( tl.getLineSegment() );
-		
-		if( percIntersection == null ){
+		Double percIntersection = this.getLineSegment().intersectionDistance(tl.getLineSegment());
+
+		if (percIntersection == null) {
 			return null;
 		}
-		
-		if( percIntersection < 0 || percIntersection > 1 ){
+
+		if (percIntersection < 0 || percIntersection > 1) {
 			return null;
 		}
-		
+
 		long time = (long) (this.getDuration() * percIntersection + p0.time);
 
 		return new Crossing(this, tl, time);
 	}
 
 	private LineSegment getLineSegment() {
-		return new LineSegment( new Coordinate(p0.lon,p0.lat), new Coordinate(p1.lon,p1.lat) );
+		return new LineSegment(new Coordinate(p0.lon, p0.lat), new Coordinate(p1.lon, p1.lat));
 	}
 
 	private long getDuration() {
@@ -63,7 +58,7 @@ public class GPSSegment {
 	}
 
 	public boolean isStill() {
-		return p0.lat==p1.lat && p0.lon==p1.lon;
+		return p0.lat == p1.lat && p0.lon == p1.lon;
 	}
 
 }

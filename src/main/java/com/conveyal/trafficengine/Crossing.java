@@ -11,13 +11,13 @@ public class Crossing {
 		this.tripline = tl;
 		this.timeMillis = time;
 	}
-	
-	public String toString(){
-		return "vehicle "+gpsSegment.p0.vehicleId+" crossed "+tripline+" at "+timeMillis;
+
+	public String toString() {
+		return "vehicle " + gpsSegment.p0.vehicleId + " crossed " + tripline + " at " + timeMillis;
 	}
 
 	public double getTime() {
-		return timeMillis/1000.0;
+		return timeMillis / 1000.0;
 	}
 
 }

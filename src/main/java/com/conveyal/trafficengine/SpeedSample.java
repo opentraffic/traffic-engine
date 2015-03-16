@@ -11,9 +11,10 @@ public class SpeedSample {
 		this.c1 = c1;
 		this.speed = speed;
 	}
-	
-	public String toString(){
-		return "[SpeedSample wayid:"+c1.tripline.wayId+" vehicleId:"+c1.gpsSegment.vehicleId+" time:"+c1.getTime()+" speed:"+speed+"]";
+
+	public String toString() {
+		return "[SpeedSample wayid:" + c1.tripline.wayId + " vehicleId:" + c1.gpsSegment.vehicleId + " time:"
+				+ c1.getTime() + " speed:" + speed + "]";
 	}
 
 }

@@ -8,19 +8,19 @@ import com.vividsolutions.jts.geom.GeometryFactory;
 import com.vividsolutions.jts.geom.LineString;
 
 public class OSMUtils {
-	static public LineString getLineStringForWay(Way way, OSM osm) {		
+	static public LineString getLineStringForWay(Way way, OSM osm) {
 		Coordinate[] coords = new Coordinate[way.nodes.length];
-		for(int i=0; i<coords.length; i++){
+		for (int i = 0; i < coords.length; i++) {
 			Long nd = way.nodes[i];
 			Node node = osm.nodes.get(nd);
-			
-			if(node==null){
-				throw new RuntimeException( "Way contains unknown node "+nd );
+
+			if (node == null) {
+				throw new RuntimeException("Way contains unknown node " + nd);
 			}
-			
-			coords[i] = new Coordinate( node.getLon(), node.getLat() );
+
+			coords[i] = new Coordinate(node.getLon(), node.getLat());
 		}
-		
+
 		return new GeometryFactory().createLineString(coords);
 	}
 }
