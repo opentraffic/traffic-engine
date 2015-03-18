@@ -12,21 +12,27 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentNavigableMap;
 
+import com.vividsolutions.jts.geom.*;
 import org.geotools.referencing.GeodeticCalculator;
 import org.mapdb.DB;
 import org.mapdb.DBMaker;
 
 import com.conveyal.osmlib.OSM;
 import com.conveyal.osmlib.Way;
+
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.LineString;
 import com.vividsolutions.jts.geom.Point;
+
 import com.vividsolutions.jts.index.quadtree.Quadtree;
 import com.vividsolutions.jts.linearref.LengthIndexedLine;
 
 public class TrafficEngine {
 	private static final double INTERSECTION_MARGIN_METERS = 10;
 	private static final double TRIPLINE_RADIUS = 10;
+
+	Envelope engineEnvelope = new Envelope();
+
 	GeodeticCalculator gc = new GeodeticCalculator();
 	List<TripLine> triplines = new ArrayList<TripLine>();
 	Map<String, GPSPoint> lastPoint = new HashMap<String, GPSPoint>();
@@ -94,10 +100,25 @@ public class TrafficEngine {
 		return ret;
 	}
 
+	public Coordinate getCenterPoint() {
+		return engineEnvelope.centre();
+	}
+
+	public Envelope getBounds() {
+		return engineEnvelope;
+	}
+
+	public List<TripLine> getTripLines() {
+		return triplines;
+	}
+
+	public List<TripLine> getTripLines(Envelope env) {
+		return index.query(env);
+	}
+
 	private void addTripLines(OSM osm) {
 		// find intersection nodes
 		Set<Long> intersections = findIntersections(osm);
-
 		System.out.println(String.format("%d intersections", intersections.size()));
 
 		// for each way
@@ -138,8 +159,10 @@ public class TrafficEngine {
 					logClusterIndex( wayId, i );
 					
 					Point pt = wayPath.getPointN(i);
-					double ptIndex = indexedWayPath.project(pt.getCoordinate());
 
+					engineEnvelope.expandToInclude(pt.getCoordinate());
+
+					double ptIndex = indexedWayPath.project(pt.getCoordinate());
 					double preIndex = ptIndex - intersection_margin;
 					if (preIndex >= startIndex) {
 						TripLine tl = genTripline(wayId, i, tlIndex, tlClusterIndex, indexedWayPath, scale, preIndex);
