@@ -35,6 +35,7 @@ public class TrafficEngine {
 	private Quadtree index = new Quadtree();
 	DB stats;
 	ConcurrentNavigableMap<SampleBucketKey, SampleBucket> meansMap;
+	Map<Long, List<Integer>> clusters = new HashMap<Long,List<Integer>>();
 	
 	public TrafficEngine(){
 		stats = DBMaker.newMemoryDB().transactionDisable().make();
@@ -43,6 +44,54 @@ public class TrafficEngine {
 
 	public void setStreets(OSM osm) {
 		addTripLines(osm);
+	}
+	
+	public List<StreetSegment> getStreetSegments(OSM osm){
+		// chop up given OSM into segments at tripengine's tripline clusters
+		
+		List<StreetSegment> ret = new ArrayList<StreetSegment>();
+		
+		for( Entry<Long, Way> entry : osm.ways.entrySet() ){
+			Long wayId = entry.getKey();
+			Way way  = entry.getValue();
+			
+			if(!way.hasTag("highway")){
+				continue;
+			}
+			
+			LineString ls;
+			try{
+				ls = OSMUtils.getLineStringForWay(way, osm);
+			} catch (RuntimeException ex ){
+				continue;
+			}
+			
+			int lastNd = 0;
+			
+			List<Integer> nds = clusters.get(wayId);
+			if(nds == null){
+				nds = new ArrayList<Integer>();
+			}
+			nds.add( ls.getNumPoints()-1 );
+		
+			for(Integer nd : nds){
+				if(nd==lastNd){
+					continue;
+				}
+				
+				Coordinate[] seg = new Coordinate[nd-lastNd+1];
+				for(int i=lastNd; i<=nd; i++){
+					seg[i-lastNd] = ls.getCoordinateN(i);
+				}
+				
+				ret.add( new StreetSegment( seg, wayId, way, lastNd, nd ) );
+				
+				lastNd = nd;
+			}
+			
+		}
+		
+		return ret;
 	}
 
 	private void addTripLines(OSM osm) {
@@ -81,15 +130,19 @@ public class TrafficEngine {
 			double intersection_margin = INTERSECTION_MARGIN_METERS * scale; 
 			
 			int tlIndex = 0;
+			int tlClusterIndex = 0;
 			for (int i = 0; i < way.nodes.length; i++) {
 				Long nd = way.nodes[i];
 				if (i == 0 || i == way.nodes.length - 1 || intersections.contains(nd)) {
+					// log the cluster index so we can slice up the OSM later
+					logClusterIndex( wayId, i );
+					
 					Point pt = wayPath.getPointN(i);
 					double ptIndex = indexedWayPath.project(pt.getCoordinate());
 
 					double preIndex = ptIndex - intersection_margin;
 					if (preIndex >= startIndex) {
-						TripLine tl = genTripline(wayId, i, tlIndex, indexedWayPath, scale, preIndex);
+						TripLine tl = genTripline(wayId, i, tlIndex, tlClusterIndex, indexedWayPath, scale, preIndex);
 						index.insert(tl.getEnvelope(), tl);
 						triplines.add(tl);
 						tlIndex += 1;
@@ -97,19 +150,29 @@ public class TrafficEngine {
 
 					double postIndex = ptIndex + intersection_margin;
 					if (postIndex <= endIndex) {
-						TripLine tl = genTripline(wayId, i, tlIndex, indexedWayPath, scale, postIndex);
+						TripLine tl = genTripline(wayId, i, tlIndex, tlClusterIndex, indexedWayPath, scale, postIndex);
 						index.insert(tl.getEnvelope(), tl);
 						triplines.add(tl);
 						tlIndex += 1;
 					}
 
+					tlClusterIndex += 1;
 				}
 			}
 
 		}
 	}
 
-	private TripLine genTripline(long wayId, int ndIndex, int tlIndex, LengthIndexedLine lil, double scale,
+	private void logClusterIndex(long wayId, int i) {
+		List<Integer> wayClusters = clusters.get(wayId);
+		if( wayClusters == null ){
+			wayClusters = new ArrayList<Integer>();
+			clusters.put( wayId, wayClusters );
+		}
+		wayClusters.add( i );
+	}
+
+	private TripLine genTripline(long wayId, int ndIndex, int tlIndex, int tlClusterIndex, LengthIndexedLine lil, double scale,
 			double lengthIndex) {
 		double l1Bearing = getBearing(lil, lengthIndex);
 
@@ -120,7 +183,7 @@ public class TrafficEngine {
 		gc.setDirection(clampAzimuth(l1Bearing - 90), TRIPLINE_RADIUS);
 		Point2D tlLeft = gc.getDestinationGeographicPoint();
 
-		TripLine tl = new TripLine(tlRight, tlLeft, wayId, ndIndex, tlIndex, lengthIndex / scale);
+		TripLine tl = new TripLine(tlRight, tlLeft, wayId, ndIndex, tlIndex, tlClusterIndex, lengthIndex / scale);
 		return tl;
 	}
 
@@ -239,7 +302,7 @@ public class TrafficEngine {
 				continue;
 			}
 			
-			if(Math.abs(lastCrossing.tripline.ndIndex - crossing.tripline.ndIndex) != 1) {
+			if(Math.abs(lastCrossing.tripline.tlClusterIndex - crossing.tripline.tlClusterIndex) != 1) {
 				continue;
 			}
 			
