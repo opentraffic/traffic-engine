@@ -28,8 +28,10 @@ import com.vividsolutions.jts.index.quadtree.Quadtree;
 import com.vividsolutions.jts.linearref.LengthIndexedLine;
 
 public class TrafficEngine {
-	private static final double INTERSECTION_MARGIN_METERS = 10;
-	private static final double TRIPLINE_RADIUS = 10;
+	private static final double INTERSECTION_MARGIN_METERS = 10;//25;
+	private static final double TRIPLINE_RADIUS = 10;//25;
+	private static final double MAX_SPEED = 31.0;
+	private static final int MAX_GPS_PAIR_DURATION = 20;
 
 	Envelope engineEnvelope = new Envelope();
 
@@ -295,6 +297,10 @@ public class TrafficEngine {
 		if (p0 == null) {
 			return;
 		}
+		
+		if( gpsPoint.time - p0.time > MAX_GPS_PAIR_DURATION*1000 ){
+			return;
+		}
 
 		// see which triplines the line segment p0 -> gpsPoint crosses
 		GPSSegment gpsSegment = new GPSSegment(p0, gpsPoint);
@@ -343,6 +349,10 @@ public class TrafficEngine {
 			}
 
 			double speed = ds / dt; // meters per second
+			
+			if( speed > MAX_SPEED ){
+				continue; // any speed sample above MAX_SPEED is assumed to be GPS junk.
+			}
 
 			SpeedSample ss = new SpeedSample(lastCrossing, crossing, speed);
 
