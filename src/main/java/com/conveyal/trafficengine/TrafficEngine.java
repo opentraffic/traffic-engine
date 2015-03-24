@@ -38,7 +38,7 @@ public class TrafficEngine {
 	GeodeticCalculator gc = new GeodeticCalculator();
 	List<TripLine> triplines = new ArrayList<TripLine>();
 	Map<String, GPSPoint> lastPoint = new HashMap<String, GPSPoint>();
-	Map<String, Map<Long, Crossing>> crossings = new HashMap<String, Map<Long, Crossing>>();
+	Map<String, Crossing> lastCrossings = new HashMap<String, Crossing>();
 	public SpeedSampleListener speedSampleListener;
 	private Quadtree index = new Quadtree();
 	DB stats;
@@ -298,7 +298,7 @@ public class TrafficEngine {
 			return;
 		}
 		
-		if( gpsPoint.time - p0.time > MAX_GPS_PAIR_DURATION*1000 ){
+		if( gpsPoint.time - p0.time > MAX_GPS_PAIR_DURATION*1000000 ){
 			return;
 		}
 
@@ -312,22 +312,17 @@ public class TrafficEngine {
 		List<Crossing> segCrossings = getCrossingsInOrder(gpsSegment);
 
 		for (Crossing crossing : segCrossings) {
-			TripLine tl = crossing.tripline;
-
 			// check if the traffic engine has a record for this vehicle's
 			// previous
 			// crossings
-			Map<Long, Crossing> wayToCrossing = crossings.get(gpsPoint.vehicleId);
-			if (wayToCrossing == null) {
-				wayToCrossing = new HashMap<Long, Crossing>();
-				crossings.put(gpsPoint.vehicleId, wayToCrossing);
-			}
-
-			// check if there's a previous tripline crossing on this way
-			Crossing lastCrossing = wayToCrossing.get(tl.wayId);
-			wayToCrossing.put(tl.wayId, crossing);
+			Crossing lastCrossing = lastCrossings.get(gpsPoint.vehicleId);
+			lastCrossings.put( gpsPoint.vehicleId, crossing);
 			
 			if(lastCrossing == null){
+				continue;
+			}
+			
+			if(lastCrossing.tripline.wayId != crossing.tripline.wayId){
 				continue;
 			}
 			
@@ -341,6 +336,7 @@ public class TrafficEngine {
 			double dt = crossing.getTime() - lastCrossing.getTime(); // seconds
 			
 			if( dt < 0 ){
+				System.out.println( segCrossings.size() );
 				throw new RuntimeException( String.format("this crossing happened before %fs before the last crossing", dt) );
 			}
 			
@@ -383,10 +379,10 @@ public class TrafficEngine {
 
 			@Override
 			public int compare(Crossing o1, Crossing o2) {
-				if( o1.timeMillis < o2.timeMillis ){
+				if( o1.timeMicros < o2.timeMicros ){
 					return -1;
 				}
-				if( o1.timeMillis > o2.timeMillis ){
+				if( o1.timeMicros > o2.timeMicros ){
 					return 1;
 				}
 				return 0;

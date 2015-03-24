@@ -14,12 +14,12 @@ public class SampleBucketKey implements Serializable, Comparable<SampleBucketKey
 		this.wayId = ss.c0.tripline.wayId;
 		this.startNodeIndex = ss.c0.tripline.ndIndex;
 		this.endNodeIndex = ss.c1.tripline.ndIndex;
-		this.hourOfWeek = getHourOfWeek( ss.c1.timeMillis );
+		this.hourOfWeek = getHourOfWeek( ss.c1.timeMicros );
 	}
 
-	private int getHourOfWeek(long timeMillis) {
+	private int getHourOfWeek(long timeMicros) {
 		Calendar c = Calendar.getInstance();
-		c.setTimeInMillis( timeMillis );
+		c.setTimeInMillis( timeMicros/1000 );
 		
 		int dowVal = c.get(Calendar.DAY_OF_WEEK);
 		int dow=0;

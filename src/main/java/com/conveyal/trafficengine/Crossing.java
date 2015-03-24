@@ -4,20 +4,20 @@ public class Crossing {
 
 	GPSSegment gpsSegment;
 	TripLine tripline;
-	long timeMillis;
+	long timeMicros;
 
 	public Crossing(GPSSegment gpsSegment, TripLine tl, long time) {
 		this.gpsSegment = gpsSegment;
 		this.tripline = tl;
-		this.timeMillis = time;
+		this.timeMicros = time;
 	}
 
 	public String toString() {
-		return "vehicle " + gpsSegment.p0.vehicleId + " crossed " + tripline + " at " + timeMillis;
+		return "vehicle " + gpsSegment.p0.vehicleId + " crossed " + tripline + " at " + timeMicros;
 	}
 
 	public double getTime() {
-		return timeMillis / 1000.0;
+		return timeMicros / 1000000.0;
 	}
 
 }
