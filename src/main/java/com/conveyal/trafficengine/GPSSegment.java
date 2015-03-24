@@ -28,17 +28,19 @@ public class GPSSegment {
 	}
 
 	public Crossing getCrossing(TripLine tl) {
-		Double percIntersection = this.getLineSegment().intersectionDistance(tl.getLineSegment());
+		Double percAlongGpsSegment = this.getLineSegment().intersectionDistance(tl.getLineSegment());
 
-		if (percIntersection == null) {
+		if (percAlongGpsSegment == null || percAlongGpsSegment < 0 || percAlongGpsSegment > 1) {
+			return null;
+		}
+		
+		Double percAlongTripline = tl.getLineSegment().intersectionDistance(this.getLineSegment());
+		
+		if (percAlongTripline == null || percAlongTripline < 0 || percAlongTripline > 1) {
 			return null;
 		}
 
-		if (percIntersection < 0 || percIntersection > 1) {
-			return null;
-		}
-
-		long time = (long) (this.getDuration() * percIntersection + p0.time);
+		long time = (long) (this.getDuration() * percAlongGpsSegment + p0.time);
 
 		return new Crossing(this, tl, time);
 	}
