@@ -47,4 +47,16 @@ public class TripLine {
 		return new LineSegment(geom.getCoordinateN(0), geom.getCoordinateN(1));
 	}
 
+	public LineString getGeom() {
+		return this.geom;
+	}
+
+	public long getWayId() {
+		return this.wayId;
+	}
+
+	public int getClusterIndex() {
+		return this.tlClusterIndex;
+	}
+
 }
