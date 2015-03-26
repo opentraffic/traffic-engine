@@ -31,7 +31,7 @@ public class TrafficEngine {
 	private static final double TRIPLINE_RADIUS = 10;//25;
 	private static final double MAX_SPEED = 31.0;
 	private static final int MAX_GPS_PAIR_DURATION = 20;
-	private static final double MIN_SEGMENT_LEN = 0;
+	private static final double MIN_SEGMENT_LEN = INTERSECTION_MARGIN_METERS*2;
 
 	Envelope engineEnvelope = new Envelope();
 
@@ -154,6 +154,10 @@ public class TrafficEngine {
 			}
 
 			double wayLen = getLength(wayPath); // meters
+			
+			if(wayLen < MIN_SEGMENT_LEN){
+				continue;
+			}
 
 			LengthIndexedLine indexedWayPath = new LengthIndexedLine(wayPath);
 			double startIndex = indexedWayPath.getStartIndex();
@@ -185,7 +189,9 @@ public class TrafficEngine {
 					
 					engineEnvelope.expandToInclude(pt.getCoordinate());
 
-					boolean oneway = way.tagIsTrue("oneway");
+					boolean oneway = way.tagIsTrue("oneway") ||
+									 (way.hasTag("highway") && way.getTag("highway").equals("motorway")) || 
+									 (way.hasTag("junction") && way.getTag("junction").equals("roundabout"));
 					
 					double preIndex = ptIndex - intersection_margin;
 					if (preIndex >= startIndex) {
