@@ -183,14 +183,13 @@ public class TrafficEngine {
 					// log the cluster index so we can slice up the OSM later
 					logClusterIndex( wayId, i );
 					
-					
-
 					engineEnvelope.expandToInclude(pt.getCoordinate());
 
+					boolean oneway = way.tagIsTrue("oneway");
 					
 					double preIndex = ptIndex - intersection_margin;
 					if (preIndex >= startIndex) {
-						TripLine tl = genTripline(wayId, i, tlIndex, tlClusterIndex, indexedWayPath, scale, preIndex);
+						TripLine tl = genTripline(wayId, i, tlIndex, tlClusterIndex, indexedWayPath, scale, preIndex, oneway);
 						index.insert(tl.getEnvelope(), tl);
 						triplines.add(tl);
 						tlIndex += 1;
@@ -198,7 +197,7 @@ public class TrafficEngine {
 
 					double postIndex = ptIndex + intersection_margin;
 					if (postIndex <= endIndex) {
-						TripLine tl = genTripline(wayId, i, tlIndex, tlClusterIndex, indexedWayPath, scale, postIndex);
+						TripLine tl = genTripline(wayId, i, tlIndex, tlClusterIndex, indexedWayPath, scale, postIndex, oneway);
 						index.insert(tl.getEnvelope(), tl);
 						triplines.add(tl);
 						tlIndex += 1;
@@ -230,7 +229,7 @@ public class TrafficEngine {
 	}
 
 	private TripLine genTripline(long wayId, int ndIndex, int tlIndex, int tlClusterIndex, LengthIndexedLine lil, double scale,
-			double lengthIndex) {
+			double lengthIndex, boolean oneway) {
 		double l1Bearing = getBearing(lil, lengthIndex);
 
 		Coordinate p1 = lil.extractPoint(lengthIndex);
@@ -240,7 +239,7 @@ public class TrafficEngine {
 		gc.setDirection(clampAzimuth(l1Bearing - 90), TRIPLINE_RADIUS);
 		Point2D tlLeft = gc.getDestinationGeographicPoint();
 
-		TripLine tl = new TripLine(tlRight, tlLeft, wayId, ndIndex, tlIndex, tlClusterIndex, lengthIndex / scale);
+		TripLine tl = new TripLine(tlRight, tlLeft, wayId, ndIndex, tlIndex, tlClusterIndex, lengthIndex / scale, oneway);
 		return tl;
 	}
 
@@ -369,6 +368,11 @@ public class TrafficEngine {
 			vehiclePendingCrossings.add( crossing );
 			
 			if(lastCrossing == null){
+				continue;
+			}
+			
+			// don't record speeds for vehicles heading up the road in the wrong direction, if it's a one-way road
+			if(crossing.tripline.ndIndex < lastCrossing.tripline.ndIndex && crossing.tripline.oneway){
 				continue;
 			}
 			

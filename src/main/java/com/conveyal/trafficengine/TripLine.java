@@ -19,8 +19,9 @@ public class TripLine {
 	                    // along a way segment containing many nodes.
 	double dist;
 	LineString geom;
+	public boolean oneway;
 
-	public TripLine(Point2D left, Point2D right, long wayId, int ndIndex, int tlIndex, int tlClusterIndex, double dist) {
+	public TripLine(Point2D left, Point2D right, long wayId, int ndIndex, int tlIndex, int tlClusterIndex, double dist, boolean oneway) {
 		GeometryFactory gf = new GeometryFactory();
 
 		Coordinate[] coords = new Coordinate[2];
@@ -33,6 +34,7 @@ public class TripLine {
 		this.tlIndex = tlIndex;
 		this.tlClusterIndex = tlClusterIndex;
 		this.dist = dist;
+		this.oneway = oneway;
 	}
 
 	public String toString() {
