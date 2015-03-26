@@ -20,4 +20,16 @@ public class Crossing {
 		return timeMicros / 1000000.0;
 	}
 
+	public boolean completedBy(Crossing nextCrossing) {
+		if(this.tripline.wayId != nextCrossing.tripline.wayId){
+			return false;
+		}
+		
+		if(Math.abs(this.tripline.tlClusterIndex - nextCrossing.tripline.tlClusterIndex) != 1) {
+			return false;
+		}
+		
+		return true;
+	}
+
 }

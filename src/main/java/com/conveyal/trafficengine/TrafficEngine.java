@@ -31,19 +31,19 @@ public class TrafficEngine {
 	private static final double TRIPLINE_RADIUS = 10;//25;
 	private static final double MAX_SPEED = 31.0;
 	private static final int MAX_GPS_PAIR_DURATION = 20;
-	private static final double MIN_SEGMENT_LEN = 50;
+	private static final double MIN_SEGMENT_LEN = 0;
 
 	Envelope engineEnvelope = new Envelope();
 
 	GeodeticCalculator gc = new GeodeticCalculator();
 	List<TripLine> triplines = new ArrayList<TripLine>();
 	Map<String, GPSPoint> lastPoint = new HashMap<String, GPSPoint>();
-	Map<String, Crossing> lastCrossings = new HashMap<String, Crossing>();
 	public SpeedSampleListener speedSampleListener;
 	private Quadtree index = new Quadtree();
 	DB stats;
 	Map<SampleBucketKey, SampleBucket> meansMap;
 	Map<Long, List<Integer>> clusters = new HashMap<Long,List<Integer>>();
+	Map<String, Set<Crossing>> pendingCrossings = new HashMap<String,Set<Crossing>>();
 	
 	public TrafficEngine(){
 		//stats = DBMaker.newMemoryDB().transactionDisable().make();
@@ -344,21 +344,31 @@ public class TrafficEngine {
 		List<Crossing> segCrossings = getCrossingsInOrder(gpsSegment);
 
 		for (Crossing crossing : segCrossings) {
-			// check if the traffic engine has a record for this vehicle's
-			// previous
-			// crossings
-			Crossing lastCrossing = lastCrossings.get(gpsPoint.vehicleId);
-			lastCrossings.put( gpsPoint.vehicleId, crossing);
+			// get pending crossings for this vehicle
+			Set<Crossing> vehiclePendingCrossings = pendingCrossings.get(gpsPoint.vehicleId);
+			if(vehiclePendingCrossings == null){
+				vehiclePendingCrossings = new HashSet<Crossing>();
+				pendingCrossings.put( gpsPoint.vehicleId, vehiclePendingCrossings );
+			}
+			
+			// see if this crossing completes any of the pending crossings
+			Crossing lastCrossing = null;
+			for( Crossing vehiclePendingCrossing : vehiclePendingCrossings ){
+				if( vehiclePendingCrossing.completedBy( crossing ) ){
+					lastCrossing = vehiclePendingCrossing;
+					
+					// if this crossing completes a pending crossing, then this crossing
+					// wins and all other pending crossings are deleted
+					vehiclePendingCrossings = new HashSet<Crossing>();
+					pendingCrossings.put( gpsPoint.vehicleId, vehiclePendingCrossings );
+					break;
+				}
+			}
+			
+			// this crossing is now a pending crossing
+			vehiclePendingCrossings.add( crossing );
 			
 			if(lastCrossing == null){
-				continue;
-			}
-			
-			if(lastCrossing.tripline.wayId != crossing.tripline.wayId){
-				continue;
-			}
-			
-			if(Math.abs(lastCrossing.tripline.tlClusterIndex - crossing.tripline.tlClusterIndex) != 1) {
 				continue;
 			}
 			
