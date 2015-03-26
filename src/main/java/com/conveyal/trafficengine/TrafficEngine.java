@@ -13,17 +13,16 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentNavigableMap;
 
 import com.vividsolutions.jts.geom.*;
+
 import org.geotools.referencing.GeodeticCalculator;
 import org.mapdb.DB;
 import org.mapdb.DBMaker;
 
 import com.conveyal.osmlib.OSM;
 import com.conveyal.osmlib.Way;
-
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.LineString;
 import com.vividsolutions.jts.geom.Point;
-
 import com.vividsolutions.jts.index.quadtree.Quadtree;
 import com.vividsolutions.jts.linearref.LengthIndexedLine;
 
@@ -42,12 +41,13 @@ public class TrafficEngine {
 	public SpeedSampleListener speedSampleListener;
 	private Quadtree index = new Quadtree();
 	DB stats;
-	ConcurrentNavigableMap<SampleBucketKey, SampleBucket> meansMap;
+	Map<SampleBucketKey, SampleBucket> meansMap;
 	Map<Long, List<Integer>> clusters = new HashMap<Long,List<Integer>>();
 	
 	public TrafficEngine(){
-		stats = DBMaker.newMemoryDB().transactionDisable().make();
-		meansMap = stats.getTreeMap("means");
+		//stats = DBMaker.newMemoryDB().transactionDisable().make();
+		//meansMap = stats.getTreeMap("means");
+		meansMap = new HashMap<SampleBucketKey,SampleBucket>();
 	}
 
 	public void setStreets(OSM osm) {
@@ -114,6 +114,7 @@ public class TrafficEngine {
 		return triplines;
 	}
 
+	@SuppressWarnings("unchecked")
 	public List<TripLine> getTripLines(Envelope env) {
 		return index.query(env);
 	}
@@ -128,8 +129,19 @@ public class TrafficEngine {
 		for (Entry<Long, Way> wayEntry : osm.ways.entrySet()) {
 			long wayId = wayEntry.getKey();
 			Way way = wayEntry.getValue();
+			
+			String highwayType = way.getTag("highway");
+			
+			if(highwayType == null){
+				continue;
+			}
 
-			if (!way.hasTag("highway")) {
+			String[] motorwayTypes = {"motorway","trunk",
+					"primary","secondary","tertiary","unclassified",
+					"residential","service","motorway_link","trunk_link",
+					"primary_link","secondary_link","tertiary_link"};
+			
+			if( !among(highwayType,motorwayTypes) ){
 				continue;
 			}
 
@@ -186,6 +198,15 @@ public class TrafficEngine {
 			}
 
 		}
+	}
+
+	private boolean among(String str, String[] ary) {
+		for(String item : ary){
+			if(str.equals(item)){
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private void logClusterIndex(long wayId, int i) {
