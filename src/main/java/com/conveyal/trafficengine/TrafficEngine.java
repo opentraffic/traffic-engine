@@ -31,6 +31,7 @@ public class TrafficEngine {
 	private static final double TRIPLINE_RADIUS = 10;//25;
 	private static final double MAX_SPEED = 31.0;
 	private static final int MAX_GPS_PAIR_DURATION = 20;
+	private static final double MIN_SEGMENT_LEN = 50;
 
 	Envelope engineEnvelope = new Envelope();
 
@@ -166,17 +167,27 @@ public class TrafficEngine {
 			
 			int tlIndex = 0;
 			int tlClusterIndex = 0;
+			double lastDist = 0;
 			for (int i = 0; i < way.nodes.length; i++) {
 				Long nd = way.nodes[i];
 				if (i == 0 || i == way.nodes.length - 1 || intersections.contains(nd)) {
+					Point pt = wayPath.getPointN(i);
+					double ptIndex = indexedWayPath.project(pt.getCoordinate());
+					double ptDist = ptIndex/scale;
+					
+					if(i!=0 && i!=way.nodes.length-1 && ptDist-lastDist < MIN_SEGMENT_LEN){
+						continue;
+					}
+					lastDist = ptDist;
+					
 					// log the cluster index so we can slice up the OSM later
 					logClusterIndex( wayId, i );
 					
-					Point pt = wayPath.getPointN(i);
+					
 
 					engineEnvelope.expandToInclude(pt.getCoordinate());
 
-					double ptIndex = indexedWayPath.project(pt.getCoordinate());
+					
 					double preIndex = ptIndex - intersection_margin;
 					if (preIndex >= startIndex) {
 						TripLine tl = genTripline(wayId, i, tlIndex, tlClusterIndex, indexedWayPath, scale, preIndex);
