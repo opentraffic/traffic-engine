@@ -6,6 +6,7 @@ import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.Envelope;
 import com.vividsolutions.jts.geom.GeometryFactory;
 import com.vividsolutions.jts.geom.LineString;
+import com.vividsolutions.jts.geom.Point;
 
 public class TripLine {
 
@@ -59,6 +60,10 @@ public class TripLine {
 
 	public int getClusterIndex() {
 		return this.tlClusterIndex;
+	}
+
+	public Object getIdString() {
+		return this.wayId+":"+this.ndIndex;
 	}
 
 }

@@ -44,6 +44,7 @@ public class TrafficEngine {
 	Map<SampleBucketKey, SampleBucket> meansMap;
 	Map<Long, List<Integer>> clusters = new HashMap<Long,List<Integer>>();
 	Map<String, Set<Crossing>> pendingCrossings = new HashMap<String,Set<Crossing>>();
+	Map<TripLine, Map<TripLine,Integer>> dropOffs = new HashMap<TripLine, Map<TripLine,Integer>>();
 	
 	public TrafficEngine(){
 		//stats = DBMaker.newMemoryDB().transactionDisable().make();
@@ -362,10 +363,43 @@ public class TrafficEngine {
 				if( vehiclePendingCrossing.completedBy( crossing ) ){
 					lastCrossing = vehiclePendingCrossing;
 					
+					// when a pending crossing is completed, a bunch of pending crossing are left
+					// that will never be completed. These pending crossings are "drop-off points", 
+					// where a GPS trace tripped a line but somehow dropped off the line segment between
+					// a pair of trippoints, never to complete it. We can record the tripline that
+					// _started_ the pair that was eventually completed as the place where the drop-off
+					// was picked back up. By doing this we can identify OSM locations with poor connectivity
+					
+					TripLine pickUp = lastCrossing.getTripline();
+					for( Crossing dropOffCrossing : vehiclePendingCrossings ){
+						if( lastCrossing.equals( pickUp ) ){
+							continue;
+						}
+						
+						TripLine dropOff = dropOffCrossing.getTripline();
+						
+						if( pickUp.wayId==dropOff.wayId && pickUp.tlClusterIndex==dropOff.tlClusterIndex ){
+							continue;
+						}
+						
+						Map<TripLine,Integer> pickups = dropOffs.get( dropOff );
+						if(pickups==null){
+							pickups = new HashMap<TripLine,Integer>();
+							dropOffs.put( dropOff, pickups );
+						}
+						Integer pickupCount = pickups.get( pickUp );
+						if(pickupCount==null){
+							pickupCount = 0;
+						}
+						pickups.put(pickUp, pickupCount+1);
+						
+					}
+					
 					// if this crossing completes a pending crossing, then this crossing
 					// wins and all other pending crossings are deleted
 					vehiclePendingCrossings = new HashSet<Crossing>();
 					pendingCrossings.put( gpsPoint.vehicleId, vehiclePendingCrossings );
+					
 					break;
 				}
 			}
@@ -459,6 +493,10 @@ public class TrafficEngine {
 
 	public Set<Entry<SampleBucketKey, SampleBucket>> statsSet() {
 		return this.meansMap.entrySet();
+	}
+
+	public Map<TripLine, Map<TripLine,Integer>> getDropOffs() {
+		return this.dropOffs;
 	}
 
 }

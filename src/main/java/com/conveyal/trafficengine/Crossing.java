@@ -32,4 +32,8 @@ public class Crossing {
 		return true;
 	}
 
+	public TripLine getTripline() {
+		return this.tripline;
+	}
+
 }
