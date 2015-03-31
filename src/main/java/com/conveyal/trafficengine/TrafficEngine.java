@@ -45,6 +45,7 @@ public class TrafficEngine {
 	Map<Long, List<Integer>> clusters = new HashMap<Long,List<Integer>>();
 	Map<String, Set<Crossing>> pendingCrossings = new HashMap<String,Set<Crossing>>();
 	Map<TripLine, Map<TripLine,Integer>> dropOffs = new HashMap<TripLine, Map<TripLine,Integer>>();
+	Map<TripLine, Integer> tripEvents = new HashMap<TripLine, Integer>();
 	
 	public TrafficEngine(){
 		//stats = DBMaker.newMemoryDB().transactionDisable().make();
@@ -350,6 +351,13 @@ public class TrafficEngine {
 		List<Crossing> segCrossings = getCrossingsInOrder(gpsSegment);
 
 		for (Crossing crossing : segCrossings) {
+			// record a crossing count for each tripline. Comes in handy, especially for
+			// dropoff analysis
+			if( !tripEvents.containsKey( crossing.tripline ) ){
+				tripEvents.put( crossing.tripline, 0 );
+			}
+			tripEvents.put( crossing.tripline, tripEvents.get(crossing.tripline)+1 );
+			
 			// get pending crossings for this vehicle
 			Set<Crossing> vehiclePendingCrossings = pendingCrossings.get(gpsPoint.vehicleId);
 			if(vehiclePendingCrossings == null){
@@ -378,7 +386,8 @@ public class TrafficEngine {
 						
 						TripLine dropOff = dropOffCrossing.getTripline();
 						
-						if( pickUp.wayId==dropOff.wayId && pickUp.tlClusterIndex==dropOff.tlClusterIndex ){
+						//if( pickUp.wayId==dropOff.wayId && pickUp.tlClusterIndex==dropOff.tlClusterIndex ){
+						if( pickUp.wayId==dropOff.wayId ){
 							continue;
 						}
 						
@@ -497,6 +506,14 @@ public class TrafficEngine {
 
 	public Map<TripLine, Map<TripLine,Integer>> getDropOffs() {
 		return this.dropOffs;
+	}
+
+	public int getNTripEvents(TripLine dropOff) {
+		Integer ret = this.tripEvents.get( dropOff );
+		if(ret == null ){
+			return 0;
+		}
+		return ret;
 	}
 
 }
