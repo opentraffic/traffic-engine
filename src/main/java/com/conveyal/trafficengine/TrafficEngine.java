@@ -1,6 +1,7 @@
 package com.conveyal.trafficengine;
 
 import java.awt.geom.Point2D;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -40,17 +41,19 @@ public class TrafficEngine {
 	Map<String, GPSPoint> lastPoint = new HashMap<String, GPSPoint>();
 	public SpeedSampleListener speedSampleListener;
 	private Quadtree index = new Quadtree();
-	DB stats;
+	
 	Map<SampleBucketKey, SampleBucket> meansMap;
 	Map<Long, List<Integer>> clusters = new HashMap<Long,List<Integer>>();
 	Map<String, Set<Crossing>> pendingCrossings = new HashMap<String,Set<Crossing>>();
 	Map<TripLine, Map<TripLine,Integer>> dropOffs = new HashMap<TripLine, Map<TripLine,Integer>>();
 	Map<TripLine, Integer> tripEvents = new HashMap<TripLine, Integer>();
 	
+	DB stats;
+	
 	public TrafficEngine(){
-		//stats = DBMaker.newMemoryDB().transactionDisable().make();
-		//meansMap = stats.getTreeMap("means");
-		meansMap = new HashMap<SampleBucketKey,SampleBucket>();
+		stats = DBMaker.newFileDB(new File("stats.db")).transactionDisable().make();
+		meansMap = stats.getTreeMap("means");
+		//meansMap = new HashMap<SampleBucketKey,SampleBucket>();
 	}
 
 	public void setStreets(OSM osm) {
@@ -351,101 +354,14 @@ public class TrafficEngine {
 		List<Crossing> segCrossings = getCrossingsInOrder(gpsSegment);
 
 		for (Crossing crossing : segCrossings) {
-			// record a crossing count for each tripline. Comes in handy, especially for
-			// dropoff analysis
-			if( !tripEvents.containsKey( crossing.tripline ) ){
-				tripEvents.put( crossing.tripline, 0 );
-			}
-			tripEvents.put( crossing.tripline, tripEvents.get(crossing.tripline)+1 );
+			recordCrossingCount(crossing.tripline);
 			
-			// get pending crossings for this vehicle
-			Set<Crossing> vehiclePendingCrossings = pendingCrossings.get(gpsPoint.vehicleId);
-			if(vehiclePendingCrossings == null){
-				vehiclePendingCrossings = new HashSet<Crossing>();
-				pendingCrossings.put( gpsPoint.vehicleId, vehiclePendingCrossings );
-			}
+			Crossing lastCrossing = getLastCrossingAndUpdatePendingCrossings(gpsPoint.vehicleId, crossing);
 			
-			// see if this crossing completes any of the pending crossings
-			Crossing lastCrossing = null;
-			for( Crossing vehiclePendingCrossing : vehiclePendingCrossings ){
-				if( vehiclePendingCrossing.completedBy( crossing ) ){
-					lastCrossing = vehiclePendingCrossing;
-					
-					// when a pending crossing is completed, a bunch of pending crossing are left
-					// that will never be completed. These pending crossings are "drop-off points", 
-					// where a GPS trace tripped a line but somehow dropped off the line segment between
-					// a pair of trippoints, never to complete it. We can record the tripline that
-					// _started_ the pair that was eventually completed as the place where the drop-off
-					// was picked back up. By doing this we can identify OSM locations with poor connectivity
-					
-					TripLine pickUp = lastCrossing.getTripline();
-					for( Crossing dropOffCrossing : vehiclePendingCrossings ){
-						if( lastCrossing.equals( pickUp ) ){
-							continue;
-						}
-						
-						TripLine dropOff = dropOffCrossing.getTripline();
-						
-						//if( pickUp.wayId==dropOff.wayId && pickUp.tlClusterIndex==dropOff.tlClusterIndex ){
-						if( pickUp.wayId==dropOff.wayId ){
-							continue;
-						}
-						
-						Map<TripLine,Integer> pickups = dropOffs.get( dropOff );
-						if(pickups==null){
-							pickups = new HashMap<TripLine,Integer>();
-							dropOffs.put( dropOff, pickups );
-						}
-						Integer pickupCount = pickups.get( pickUp );
-						if(pickupCount==null){
-							pickupCount = 0;
-						}
-						pickups.put(pickUp, pickupCount+1);
-						
-					}
-					
-					// if this crossing completes a pending crossing, then this crossing
-					// wins and all other pending crossings are deleted
-					vehiclePendingCrossings = new HashSet<Crossing>();
-					pendingCrossings.put( gpsPoint.vehicleId, vehiclePendingCrossings );
-					
-					break;
-				}
-			}
-			
-			// this crossing is now a pending crossing
-			vehiclePendingCrossings.add( crossing );
-			
-			if(lastCrossing == null){
+			SpeedSample ss = getAdmissableSpeedSample(lastCrossing, crossing);
+			if(ss==null){
 				continue;
 			}
-			
-			// don't record speeds for vehicles heading up the road in the wrong direction, if it's a one-way road
-			if(crossing.tripline.ndIndex < lastCrossing.tripline.ndIndex && crossing.tripline.oneway){
-				continue;
-			}
-			
-			// it may be useful to keep the displacement sign, but the order of the
-			// ndIndex associated with each tripline gives the direction anyway
-			double ds = Math.abs(crossing.tripline.dist - lastCrossing.tripline.dist); // meters
-			double dt = crossing.getTime() - lastCrossing.getTime(); // seconds
-			
-			if( dt < 0 ){
-				System.out.println( segCrossings.size() );
-				throw new RuntimeException( String.format("this crossing happened before %fs before the last crossing", dt) );
-			}
-			
-			if( dt==0 ){
-				continue;
-			}
-
-			double speed = ds / dt; // meters per second
-			
-			if( speed > MAX_SPEED ){
-				continue; // any speed sample above MAX_SPEED is assumed to be GPS junk.
-			}
-
-			SpeedSample ss = new SpeedSample(lastCrossing, crossing, speed);
 
 			if (this.speedSampleListener != null) {
 				this.speedSampleListener.onSpeedSample(ss);
@@ -453,6 +369,110 @@ public class TrafficEngine {
 			this.updateStats( ss );
 			
 		}
+	}
+
+	private SpeedSample getAdmissableSpeedSample(Crossing lastCrossing, Crossing crossing) {
+		if(lastCrossing == null){
+			return null;
+		}
+		
+		// don't record speeds for vehicles heading up the road in the wrong direction, if it's a one-way road
+		if(crossing.tripline.ndIndex < lastCrossing.tripline.ndIndex && crossing.tripline.oneway){
+			return null;
+		}
+		
+		// it may be useful to keep the displacement sign, but the order of the
+		// ndIndex associated with each tripline gives the direction anyway
+		double ds = Math.abs(crossing.tripline.dist - lastCrossing.tripline.dist); // meters
+		double dt = crossing.getTime() - lastCrossing.getTime(); // seconds
+		
+		if( dt < 0 ){
+			throw new RuntimeException( String.format("this crossing happened before %fs before the last crossing", dt) );
+		}
+		
+		if( dt==0 ){
+			return null;
+		}
+
+		double speed = ds / dt; // meters per second
+		
+		if( speed > MAX_SPEED ){
+			return null; // any speed sample above MAX_SPEED is assumed to be GPS junk.
+		}
+
+		SpeedSample ss = new SpeedSample(lastCrossing, crossing, speed);
+		
+		return ss;
+	}
+
+	private Crossing getLastCrossingAndUpdatePendingCrossings(String vehicleId, Crossing crossing) {
+		// get pending crossings for this vehicle
+		Set<Crossing> vehiclePendingCrossings = pendingCrossings.get(vehicleId);
+		if(vehiclePendingCrossings == null){
+			vehiclePendingCrossings = new HashSet<Crossing>();
+			pendingCrossings.put( vehicleId, vehiclePendingCrossings );
+		}
+		
+		// see if this crossing completes any of the pending crossings
+		Crossing lastCrossing = null;
+		for( Crossing vehiclePendingCrossing : vehiclePendingCrossings ){
+			if( vehiclePendingCrossing.completedBy( crossing ) ){
+				lastCrossing = vehiclePendingCrossing;
+				
+				// when a pending crossing is completed, a bunch of pending crossing are left
+				// that will never be completed. These pending crossings are "drop-off points", 
+				// where a GPS trace tripped a line but somehow dropped off the line segment between
+				// a pair of trippoints, never to complete it. We can record the tripline that
+				// _started_ the pair that was eventually completed as the place where the drop-off
+				// was picked back up. By doing this we can identify OSM locations with poor connectivity
+				
+				TripLine pickUp = lastCrossing.getTripline();
+				for( Crossing dropOffCrossing : vehiclePendingCrossings ){
+					if( lastCrossing.equals( pickUp ) ){
+						continue;
+					}
+					
+					TripLine dropOff = dropOffCrossing.getTripline();
+					
+					//if( pickUp.wayId==dropOff.wayId && pickUp.tlClusterIndex==dropOff.tlClusterIndex ){
+					if( pickUp.wayId==dropOff.wayId ){
+						continue;
+					}
+					
+					Map<TripLine,Integer> pickups = dropOffs.get( dropOff );
+					if(pickups==null){
+						pickups = new HashMap<TripLine,Integer>();
+						dropOffs.put( dropOff, pickups );
+					}
+					Integer pickupCount = pickups.get( pickUp );
+					if(pickupCount==null){
+						pickupCount = 0;
+					}
+					pickups.put(pickUp, pickupCount+1);
+					
+				}
+				
+				// if this crossing completes a pending crossing, then this crossing
+				// wins and all other pending crossings are deleted
+				vehiclePendingCrossings = new HashSet<Crossing>();
+				pendingCrossings.put( vehicleId, vehiclePendingCrossings );
+				
+				break;
+			}
+		}
+		
+		// this crossing is now a pending crossing
+		vehiclePendingCrossings.add( crossing );
+		return lastCrossing;
+	}
+
+	private void recordCrossingCount(TripLine tripline) {
+		// record a crossing count for each tripline. Comes in handy, especially for
+		// dropoff analysis
+		if( !tripEvents.containsKey( tripline ) ){
+			tripEvents.put( tripline, 0 );
+		}
+		tripEvents.put( tripline, tripEvents.get(tripline)+1 );
 	}
 
 	private List<Crossing> getCrossingsInOrder(GPSSegment gpsSegment) {
@@ -495,8 +515,8 @@ public class TrafficEngine {
 		if(sb == null) {
 			sb = new SampleBucket();
 		}
-		sb.update( ss );
 		
+		sb.update( ss );
 		meansMap.put(kk, sb);
 	}
 
