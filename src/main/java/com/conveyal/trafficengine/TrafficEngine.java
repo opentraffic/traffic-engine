@@ -1,7 +1,6 @@
 package com.conveyal.trafficengine;
 
 import java.awt.geom.Point2D;
-import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -11,13 +10,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.concurrent.ConcurrentNavigableMap;
 
 import com.vividsolutions.jts.geom.*;
 
 import org.geotools.referencing.GeodeticCalculator;
-import org.mapdb.DB;
-import org.mapdb.DBMaker;
 
 import com.conveyal.osmlib.OSM;
 import com.conveyal.osmlib.Way;
@@ -42,18 +38,13 @@ public class TrafficEngine {
 	public SpeedSampleListener speedSampleListener;
 	private Quadtree index = new Quadtree();
 	
-	Map<SampleBucketKey, SampleBucket> meansMap;
+	//Map<SampleBucketKey, SampleBucket> meansMap;
 	Map<Long, List<Integer>> clusters = new HashMap<Long,List<Integer>>();
 	Map<String, Set<Crossing>> pendingCrossings = new HashMap<String,Set<Crossing>>();
 	Map<TripLine, Map<TripLine,Integer>> dropOffs = new HashMap<TripLine, Map<TripLine,Integer>>();
 	Map<TripLine, Integer> tripEvents = new HashMap<TripLine, Integer>();
 	
-	DB stats;
-	
 	public TrafficEngine(){
-		stats = DBMaker.newFileDB(new File("stats.db")).transactionDisable().make();
-		meansMap = stats.getTreeMap("means");
-		//meansMap = new HashMap<SampleBucketKey,SampleBucket>();
 	}
 
 	public void setStreets(OSM osm) {
@@ -366,7 +357,6 @@ public class TrafficEngine {
 			if (this.speedSampleListener != null) {
 				this.speedSampleListener.onSpeedSample(ss);
 			}
-			this.updateStats( ss );
 			
 		}
 	}
@@ -506,22 +496,6 @@ public class TrafficEngine {
 		});
 		
 		return ret;
-	}
-
-	private void updateStats(SpeedSample ss) {
-		SampleBucketKey kk = new SampleBucketKey(ss);
-		
-		SampleBucket sb = meansMap.get(kk);
-		if(sb == null) {
-			sb = new SampleBucket();
-		}
-		
-		sb.update( ss );
-		meansMap.put(kk, sb);
-	}
-
-	public Set<Entry<SampleBucketKey, SampleBucket>> statsSet() {
-		return this.meansMap.entrySet();
 	}
 
 	public Map<TripLine, Map<TripLine,Integer>> getDropOffs() {

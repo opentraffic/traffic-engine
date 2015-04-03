@@ -66,4 +66,8 @@ public class TripLine {
 		return this.wayId+":"+this.ndIndex;
 	}
 
+	public int getNdIndex() {
+		return this.ndIndex;
+	}
+
 }

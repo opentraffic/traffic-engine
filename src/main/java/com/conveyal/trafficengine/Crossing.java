@@ -1,6 +1,8 @@
 package com.conveyal.trafficengine;
 
-public class Crossing {
+import java.io.Serializable;
+
+public class Crossing{
 
 	GPSSegment gpsSegment;
 	TripLine tripline;
@@ -34,6 +36,10 @@ public class Crossing {
 
 	public TripLine getTripline() {
 		return this.tripline;
+	}
+
+	public long getTimeMicros() {
+		return this.timeMicros;
 	}
 
 }
