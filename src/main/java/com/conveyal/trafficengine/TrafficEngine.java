@@ -35,7 +35,6 @@ public class TrafficEngine {
 	GeodeticCalculator gc = new GeodeticCalculator();
 	List<TripLine> triplines = new ArrayList<TripLine>();
 	Map<String, GPSPoint> lastPoint = new HashMap<String, GPSPoint>();
-	public SpeedSampleListener speedSampleListener;
 	private Quadtree index = new Quadtree();
 	
 	//Map<SampleBucketKey, SampleBucket> meansMap;
@@ -324,26 +323,27 @@ public class TrafficEngine {
 		return ret;
 	}
 
-	public void update(GPSPoint gpsPoint) {
+	public List<SpeedSample> update(GPSPoint gpsPoint) {
 		GPSPoint p0 = lastPoint.get(gpsPoint.vehicleId);
 		lastPoint.put(gpsPoint.vehicleId, gpsPoint);
 		if (p0 == null) {
-			return;
+			return null;
 		}
 		
 		if( gpsPoint.time - p0.time > MAX_GPS_PAIR_DURATION*1000000 ){
-			return;
+			return null;
 		}
 
 		// see which triplines the line segment p0 -> gpsPoint crosses
 		GPSSegment gpsSegment = new GPSSegment(p0, gpsPoint);
 
 		if (gpsSegment.isStill()) {
-			return;
+			return null;
 		}
 		
 		List<Crossing> segCrossings = getCrossingsInOrder(gpsSegment);
 
+		List<SpeedSample> ret = new ArrayList<SpeedSample>();
 		for (Crossing crossing : segCrossings) {
 			recordCrossingCount(crossing.tripline);
 			
@@ -353,12 +353,11 @@ public class TrafficEngine {
 			if(ss==null){
 				continue;
 			}
-
-			if (this.speedSampleListener != null) {
-				this.speedSampleListener.onSpeedSample(ss);
-			}
+			
+			ret.add( ss );
 			
 		}
+		return ret;
 	}
 
 	private SpeedSample getAdmissableSpeedSample(Crossing lastCrossing, Crossing crossing) {
