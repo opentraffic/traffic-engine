@@ -143,26 +143,26 @@ public class TrafficEngine {
 		Set<Long> intersections = findIntersections(osm);
 
 		// for each way
-		// place intersection lines on both sides of intersections
 		for (Entry<Long, Way> wayEntry : osm.ways.entrySet()) {
 			long wayId = wayEntry.getKey();
 			Way way = wayEntry.getValue();
 			
+			// Check to make sure it's a highway
 			String highwayType = way.getTag("highway");
-			
 			if(highwayType == null){
 				continue;
 			}
 
+			// Check to make sure it's an acceptable type of highway
 			String[] motorwayTypes = {"motorway","trunk",
 					"primary","secondary","tertiary","unclassified",
 					"residential","service","motorway_link","trunk_link",
 					"primary_link","secondary_link","tertiary_link"};
-			
 			if( !among(highwayType,motorwayTypes) ){
 				continue;
 			}
 
+			// Get the way's geometry
 			LineString wayPath;
 			try {
 				wayPath = OSMUtils.getLineStringForWay(way, osm);
@@ -170,8 +170,8 @@ public class TrafficEngine {
 				continue;
 			}
 
+			// Check that it's long enough
 			double wayLen = getLength(wayPath); // meters
-			
 			if(wayLen < MIN_SEGMENT_LEN){
 				continue;
 			}
@@ -189,45 +189,60 @@ public class TrafficEngine {
 			int tlIndex = 0;
 			int tlClusterIndex = 0;
 			double lastDist = 0;
+			// for each node in the way
 			for (int i = 0; i < way.nodes.length; i++) {
 				Long nd = way.nodes[i];
-				if (i == 0 || i == way.nodes.length - 1 || intersections.contains(nd)) {
-					Point pt = wayPath.getPointN(i);
-					double ptIndex = indexedWayPath.project(pt.getCoordinate());
-					double ptDist = ptIndex/scale;
-					
-					if(i!=0 && i!=way.nodes.length-1 && ptDist-lastDist < MIN_SEGMENT_LEN){
-						continue;
-					}
-					lastDist = ptDist;
-					
-					// log the cluster index so we can slice up the OSM later
-					logClusterIndex( wayId, i );
-					
-					engineEnvelope.expandToInclude(pt.getCoordinate());
-
-					boolean oneway = way.tagIsTrue("oneway") ||
-									 (way.hasTag("highway") && way.getTag("highway").equals("motorway")) || 
-									 (way.hasTag("junction") && way.getTag("junction").equals("roundabout"));
-					
-					double preIndex = ptIndex - intersection_margin;
-					if (preIndex >= startIndex) {
-						TripLine tl = genTripline(wayId, i, tlIndex, tlClusterIndex, indexedWayPath, scale, preIndex, oneway);
-						index.insert(tl.getEnvelope(), tl);
-						triplines.add(tl);
-						tlIndex += 1;
-					}
-
-					double postIndex = ptIndex + intersection_margin;
-					if (postIndex <= endIndex) {
-						TripLine tl = genTripline(wayId, i, tlIndex, tlClusterIndex, indexedWayPath, scale, postIndex, oneway);
-						index.insert(tl.getEnvelope(), tl);
-						triplines.add(tl);
-						tlIndex += 1;
-					}
-
-					tlClusterIndex += 1;
+				
+				// only place triplines at ends and intersections
+				if( !(i == 0 || i == way.nodes.length - 1 || intersections.contains(nd)) ){
+					continue;
 				}
+				
+				// get the linear reference of this nd along the way
+				Point pt = wayPath.getPointN(i);
+				double ptIndex = indexedWayPath.project(pt.getCoordinate());
+				double ptDist = ptIndex/scale;
+				
+				// ensure the distance since the last tripline cluster is long enough
+				// or else triplines will be out of order
+				if(ptDist-lastDist < MIN_SEGMENT_LEN){
+					continue;
+				}
+				lastDist = ptDist;
+				
+				// log the cluster index so we can slice up the OSM later
+				List<Integer> wayClusters = clusters.get(wayId);
+				if( wayClusters == null ){
+					wayClusters = new ArrayList<Integer>();
+					clusters.put( wayId, wayClusters );
+				}
+				wayClusters.add( i );
+				
+				engineEnvelope.expandToInclude(pt.getCoordinate());
+
+				boolean oneway = way.tagIsTrue("oneway") ||
+								 (way.hasTag("highway") && way.getTag("highway").equals("motorway")) || 
+								 (way.hasTag("junction") && way.getTag("junction").equals("roundabout"));
+				
+				// create the tripline preceding the intersection
+				double preIndex = ptIndex - intersection_margin;
+				if (preIndex >= startIndex) {
+					TripLine tl = genTripline(wayId, i, tlIndex, tlClusterIndex, indexedWayPath, scale, preIndex, oneway);
+					index.insert(tl.getEnvelope(), tl);
+					triplines.add(tl);
+					tlIndex += 1;
+				}
+
+				// create the tripline following the intersection
+				double postIndex = ptIndex + intersection_margin;
+				if (postIndex <= endIndex) {
+					TripLine tl = genTripline(wayId, i, tlIndex, tlClusterIndex, indexedWayPath, scale, postIndex, oneway);
+					index.insert(tl.getEnvelope(), tl);
+					triplines.add(tl);
+					tlIndex += 1;
+				}
+
+				tlClusterIndex += 1;
 			}
 
 		}
@@ -240,15 +255,6 @@ public class TrafficEngine {
 			}
 		}
 		return false;
-	}
-
-	private void logClusterIndex(long wayId, int i) {
-		List<Integer> wayClusters = clusters.get(wayId);
-		if( wayClusters == null ){
-			wayClusters = new ArrayList<Integer>();
-			clusters.put( wayId, wayClusters );
-		}
-		wayClusters.add( i );
 	}
 
 	private TripLine genTripline(long wayId, int ndIndex, int tlIndex, int tlClusterIndex, LengthIndexedLine lil, double scale,
@@ -266,9 +272,12 @@ public class TrafficEngine {
 		return tl;
 	}
 
+	/**
+	 * Clamps all angles to the azimuth range -180 degrees to 180 degrees.
+	 * @param d
+	 * @return
+	 */
 	private double clampAzimuth(double d) {
-		// clamps all angles to the azimuth range -180 degrees to 180 degrees.
-
 		d %= 360;
 
 		if (d > 180.0) {
@@ -280,6 +289,12 @@ public class TrafficEngine {
 		return d;
 	}
 
+	/**
+	 * Find the tangential to a point on a linestring.
+	 * @param lil length indexed line
+	 * @param index index
+	 * @return
+	 */
 	private double getBearing(LengthIndexedLine lil, double index) {
 		double epsilon = 0.000009;
 		double i0, i1;
@@ -303,6 +318,11 @@ public class TrafficEngine {
 		return gc.getAzimuth();
 	}
 
+	/**
+	 * Get the length in meters of a line expressed in lat/lng pairs.
+	 * @param wayPath
+	 * @return
+	 */
 	private double getLength(LineString wayPath) {
 		double ret = 0;
 		for (int i = 0; i < wayPath.getNumPoints() - 1; i++) {
@@ -314,12 +334,25 @@ public class TrafficEngine {
 		return ret;
 	}
 
+	/**
+	 * Distance between two points.
+	 * @param lon1
+	 * @param lat1
+	 * @param lon2
+	 * @param lat2
+	 * @return
+	 */
 	private double getDistance(double lon1, double lat1, double lon2, double lat2) {
 		gc.setStartingGeographicPoint(lon1, lat1);
 		gc.setDestinationGeographicPoint(lon2, lat2);
 		return gc.getOrthodromicDistance();
 	}
 
+	/**
+	 * Returns the id of every node encountered in an OSM dataset more than once.
+	 * @param osm
+	 * @return
+	 */
 	private Set<Long> findIntersections(OSM osm) {
 		Set<Long> ret = new HashSet<Long>();
 
@@ -345,20 +378,34 @@ public class TrafficEngine {
 		return ret;
 	}
 
+	/**
+	 * Update the traffic engine with a new GPS fix. If the GPS fix trips a tripline
+	 * which completes a pending crossing, a speed sample will be returned. A single GPS
+	 * fix can result in more than one speed samples.
+	 * @param gpsPoint
+	 * @return
+	 */
 	public List<SpeedSample> update(GPSPoint gpsPoint) {
+		// update the state for the GPSPoint's vehicle
 		GPSPoint p0 = lastPoint.get(gpsPoint.vehicleId);
 		lastPoint.put(gpsPoint.vehicleId, gpsPoint);
+		
+		// null if this is the vehicle's first point
 		if (p0 == null) {
 			return null;
 		}
 		
+		// If the time elapsed since this vehicle's last point is
+		// larger than MAX_GPS_PAIR_DURATION, the line that connects
+		// them may not be colinear to a street; it's thrown out as
+		// not useful.
 		if( gpsPoint.time - p0.time > MAX_GPS_PAIR_DURATION*1000000 ){
 			return null;
 		}
 
-		// see which triplines the line segment p0 -> gpsPoint crosses
 		GPSSegment gpsSegment = new GPSSegment(p0, gpsPoint);
 
+		// if the segment is sitting still, it can't cross a tripline
 		if (gpsSegment.isStill()) {
 			return null;
 		}
