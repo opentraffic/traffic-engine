@@ -24,23 +24,40 @@ import com.vividsolutions.jts.index.quadtree.Quadtree;
 import com.vividsolutions.jts.linearref.LengthIndexedLine;
 
 public class TrafficEngine {
-	private static final double INTERSECTION_MARGIN_METERS = 10;//25;
-	private static final double TRIPLINE_RADIUS = 10;//25;
+	// The distance from an intersection, measured along a road, where a tripline crosses.
+	private static final double INTERSECTION_MARGIN_METERS = 10;
+	// The distance of a tripline to one side of the street. The width of the tripline is twice the radius.
+	private static final double TRIPLINE_RADIUS = 10;
+	// Max vehicle speed. Anything faster is considered noise.
 	private static final double MAX_SPEED = 31.0;
+	// Max time between two successive GPS fixes from a single vehicle. Anything longer is considered noise.
 	private static final int MAX_GPS_PAIR_DURATION = 20;
+	// Minimum distance of a way tracked by the traffic engine. Must be longer than twice the intersection margin, or else
+	// triplines would be placed out of order.
 	private static final double MIN_SEGMENT_LEN = INTERSECTION_MARGIN_METERS*2;
 
-	Envelope engineEnvelope = new Envelope();
-
 	GeodeticCalculator gc = new GeodeticCalculator();
+	
+	//====STREET DATA=====
+	// All triplines
 	List<TripLine> triplines = new ArrayList<TripLine>();
-	Map<String, GPSPoint> lastPoint = new HashMap<String, GPSPoint>();
+	// Way id -> node indexes corresponding to tripline clusters. A tripline cluster is one or two triplines
+	// flanking an intersection.
+	Map<Long, List<Integer>> clusters = new HashMap<Long,List<Integer>>();
+	// Spatial index stuff
+	Envelope engineEnvelope = new Envelope();
 	private Quadtree index = new Quadtree();
 	
-	//Map<SampleBucketKey, SampleBucket> meansMap;
-	Map<Long, List<Integer>> clusters = new HashMap<Long,List<Integer>>();
+	//====VEHICLE STATE=====
+	// Vehicle id -> last encountered GPS fix
+	Map<String, GPSPoint> lastPoint = new HashMap<String, GPSPoint>();
+	// Vehicle id -> all pending crossings
 	Map<String, Set<Crossing>> pendingCrossings = new HashMap<String,Set<Crossing>>();
+	// (tripline1, tripline2) -> count of dropoff lines.
 	Map<TripLine, Map<TripLine,Integer>> dropOffs = new HashMap<TripLine, Map<TripLine,Integer>>();
+	
+	//====STATISTICS====
+	// A count of trip events per tripline.
 	Map<TripLine, Integer> tripEvents = new HashMap<TripLine, Integer>();
 	
 	public TrafficEngine(){
@@ -50,8 +67,14 @@ public class TrafficEngine {
 		addTripLines(osm);
 	}
 	
+	/**
+	 * Chop up given OSM into segments at tripengine's tripline clusters.
+	 * 
+	 * @param osm	an osm object
+	 * @return	a list of street segments
+	 */
 	public List<StreetSegment> getStreetSegments(OSM osm){
-		// chop up given OSM into segments at tripengine's tripline clusters
+		
 		
 		List<StreetSegment> ret = new ArrayList<StreetSegment>();
 		
@@ -118,7 +141,6 @@ public class TrafficEngine {
 	private void addTripLines(OSM osm) {
 		// find intersection nodes
 		Set<Long> intersections = findIntersections(osm);
-		System.out.println(String.format("%d intersections", intersections.size()));
 
 		// for each way
 		// place intersection lines on both sides of intersections
