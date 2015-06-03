@@ -1,5 +1,6 @@
 package com.conveyal.trafficengine;
 
+import com.conveyal.traffic.geom.LineSegment;
 import com.vividsolutions.jts.geom.Coordinate;
 
 import junit.framework.TestCase;

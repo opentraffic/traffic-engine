@@ -1,4 +1,4 @@
-package com.conveyal.trafficengine;
+package com.conveyal.traffic.geom;
 
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.Envelope;
@@ -10,7 +10,7 @@ public class GPSSegment {
 	private LineString geom;
 	GPSPoint p0;
 	GPSPoint p1;
-	public String vehicleId;
+	public long vehicleId;
 
 	public GPSSegment(GPSPoint p0, GPSPoint p1) {
 		Coordinate[] coords = new Coordinate[2];
@@ -18,7 +18,7 @@ public class GPSSegment {
 		coords[1] = new Coordinate(p1.lon, p1.lat);
 		this.geom = new GeometryFactory().createLineString(coords);
 
-		if (!p0.vehicleId.equals(p1.vehicleId)) {
+		if (p0.vehicleId != p1.vehicleId) {
 			throw new IllegalArgumentException("vehicle ids don't match");
 		}
 
@@ -28,19 +28,19 @@ public class GPSSegment {
 	}
 
 	public Crossing getCrossing(TripLine tl) {
-		Double percAlongGpsSegment = this.getLineSegment().intersectionDistance(tl.getLineSegment());
+		Double percentAlongGpsSegment = this.getLineSegment().intersectionDistance(tl.getLineSegment());
 
-		if (percAlongGpsSegment == null || percAlongGpsSegment < 0 || percAlongGpsSegment > 1) {
+		if (percentAlongGpsSegment == null || percentAlongGpsSegment < 0 || percentAlongGpsSegment > 1) {
 			return null;
 		}
 		
 		Double percAlongTripline = tl.getLineSegment().intersectionDistance(this.getLineSegment());
 		
 		if (percAlongTripline == null || percAlongTripline < 0 || percAlongTripline > 1) {
-			return null;
+			return null;	
 		}
 
-		long time = (long) (this.getDuration() * percAlongGpsSegment + p0.time);
+		long time = (long) (this.getDuration() * percentAlongGpsSegment + p0.time);
 
 		return new Crossing(this, tl, time);
 	}

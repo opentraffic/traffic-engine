@@ -1,4 +1,4 @@
-package com.conveyal.trafficengine;
+package com.conveyal.traffic.geom;
 
 import com.vividsolutions.jts.geom.Coordinate;
 

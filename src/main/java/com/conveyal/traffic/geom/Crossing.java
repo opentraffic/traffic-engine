@@ -1,12 +1,12 @@
-package com.conveyal.trafficengine;
+package com.conveyal.traffic.geom;
 
 import java.io.Serializable;
 
 public class Crossing{
 
-	GPSSegment gpsSegment;
-	TripLine tripline;
-	long timeMicros;
+	public GPSSegment gpsSegment;
+	public TripLine tripline;
+	public long timeMicros;
 
 	public Crossing(GPSSegment gpsSegment, TripLine tl, long time) {
 		this.gpsSegment = gpsSegment;
@@ -18,16 +18,17 @@ public class Crossing{
 		return "vehicle " + gpsSegment.p0.vehicleId + " crossed " + tripline + " at " + timeMicros;
 	}
 
-	public double getTime() {
-		return timeMicros / 1000000.0;
+	public long getTime() {
+		return timeMicros / 1000000;
 	}
 
 	public boolean completedBy(Crossing nextCrossing) {
-		if(this.tripline.wayId != nextCrossing.tripline.wayId){
+		
+		if(this.tripline.segmentId.equals(nextCrossing.tripline.segmentId)){
 			return false;
 		}
 		
-		if(Math.abs(this.tripline.tlClusterIndex - nextCrossing.tripline.tlClusterIndex) != 1) {
+		if(Math.abs(this.tripline.triplineIndex - nextCrossing.tripline.triplineIndex) != 1) {
 			return false;
 		}
 		

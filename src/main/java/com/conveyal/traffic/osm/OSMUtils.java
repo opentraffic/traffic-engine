@@ -1,4 +1,4 @@
-package com.conveyal.trafficengine;
+package com.conveyal.traffic.osm;
 
 import java.io.File;
 import java.io.IOException;
@@ -26,6 +26,7 @@ import org.opengis.feature.simple.SimpleFeatureType;
 import com.conveyal.osmlib.Node;
 import com.conveyal.osmlib.OSM;
 import com.conveyal.osmlib.Way;
+import com.conveyal.traffic.data.SpatialDataItem;
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.GeometryFactory;
 import com.vividsolutions.jts.geom.LineString;
@@ -46,8 +47,8 @@ public class OSMUtils {
 
 		return new GeometryFactory().createLineString(coords);
 	}
-	
-	static public void toShapefile( List<StreetSegment> segs, String filename ) throws SchemaException, IOException {
+		
+	static public void toShapefile( List<SpatialDataItem> segs, String filename ) throws SchemaException, IOException {
 		final SimpleFeatureType TYPE = DataUtilities.createType("Location",
                 "the_geom:LineString:srid=4326," +
                 "name:String"
@@ -64,10 +65,9 @@ public class OSMUtils {
 
         SimpleFeatureBuilder featureBuilder = new SimpleFeatureBuilder(TYPE);
         
-        for( StreetSegment seg : segs ){
-        	LineString ls = geometryFactory.createLineString( seg.seg );
-        	featureBuilder.add( ls );
-        	featureBuilder.add( seg.wayId+"."+seg.start+"."+seg.end );
+        for( SpatialDataItem seg : segs ){
+        	featureBuilder.add( seg.geometry );
+        	featureBuilder.add( seg.id );
         	SimpleFeature feature = featureBuilder.buildFeature(null);
         	features.add( feature );
         }
