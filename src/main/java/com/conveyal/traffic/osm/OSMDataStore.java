@@ -43,11 +43,11 @@ public class OSMDataStore {
 	//====STREET DATA=====
 	
 	// All triplines
-	SpatialDataStore triplines;
+	public SpatialDataStore triplines;
 	
-	SpatialDataStore streetSegments;
+	public SpatialDataStore streetSegments;
 	
-	List<Envelope> osmSubEnvelopes = new ArrayList<Envelope>();
+	public List<Envelope> osmSubEnvelopes = new ArrayList<Envelope>();
 	
 	private Quadtree tripLineIndex = new Quadtree();
 	

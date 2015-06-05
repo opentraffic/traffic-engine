@@ -2,6 +2,9 @@ package com.conveyal.traffic;
 
 import java.awt.geom.Point2D;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.sql.Date;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -28,7 +31,9 @@ import com.conveyal.traffic.geom.GPSSegment;
 import com.conveyal.traffic.geom.StreetSegment;
 import com.conveyal.traffic.geom.TripLine;
 import com.conveyal.traffic.osm.OSMDataStore;
+import com.conveyal.traffic.stats.BaselineStatistics;
 import com.conveyal.traffic.stats.SpeedSample;
+import com.conveyal.traffic.stats.StatisticsCollector;
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.Envelope;
 import com.vividsolutions.jts.geom.LineString;
@@ -41,6 +46,8 @@ public class TrafficEngine {
 	OSMDataStore osmData;
 	
 	VehicleState vehicleState;
+	
+	StatisticsCollector statsCollector = new StatisticsCollector();
 	
 	Map<TripLine, Integer> tripEvents = new HashMap<TripLine, Integer>();
 	Envelope engineEnvelope = new Envelope();
@@ -74,12 +81,38 @@ public class TrafficEngine {
 		return osmData.getTripLines(env);
 	}
 	
-	public List<SpeedSample> update(GPSPoint gpsPoint) {
+	public int update(GPSPoint gpsPoint) {
 		
-		return vehicleState.update(gpsPoint);
+		List<SpeedSample> speedSamples =  vehicleState.update(gpsPoint);
+		
+		if(speedSamples == null) 
+			return 0;
+		
+		for(SpeedSample speedSample : speedSamples)
+			statsCollector.addSpeedSample(speedSample);
+		
+		return speedSamples.size();
 		
 	}
 	
+	public BaselineStatistics getSegementStatistics(String segmentId){
+		return statsCollector.getSegmentStatistics(segmentId);
+	}
+	
+	public void writeStatistics(File statsFile) {
+		
+		try {
+			FileOutputStream fileOut = new FileOutputStream(statsFile);
+			statsCollector.collectStatistcs(fileOut, osmData.streetSegments);
+			
+			fileOut.close();
+			
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	
+	}
 	
 	
 //	public int getVehicleCount() {
