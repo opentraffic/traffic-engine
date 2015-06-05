@@ -1,5 +1,7 @@
-# trafficengine
-OSM street extracts and GPS points go in. Anonymized OSM-linked speed samples come out.
+# traffic-engine
+Java Library for generating structured traffic speed statistics. OSM street extracts and GPS points go in. Anonymized OSM-linked speed samples come out.
+
+See traffic-engine-app for a packaged web application for collecting and visualizing traffic statistics.
 
 ## build
 
@@ -7,4 +9,3 @@ OSM street extracts and GPS points go in. Anonymized OSM-linked speed samples co
     
 ## run
 
-    # java -jar target/traffic-engine-0.1-SNAPSHOT.jar
