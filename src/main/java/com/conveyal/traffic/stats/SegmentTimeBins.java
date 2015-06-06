@@ -1,8 +1,8 @@
 package com.conveyal.traffic.stats;
 
-import java.util.concurrent.ConcurrentHashMap;
-
 import org.joda.time.DateTime;
+
+import java.util.concurrent.ConcurrentHashMap;
 
 public class SegmentTimeBins {
 	
@@ -36,9 +36,10 @@ public class SegmentTimeBins {
 
 			if(statsTimeBins.get(timeBin) == null) 
 				countByHourOfWeek[hourOfWeek] = -1;
-			
-			countByHourOfWeek[hourOfWeek] += statsTimeBins.get(timeBin).sampleCount;
-			speedSumByHourOfWeek[hourOfWeek] += statsTimeBins.get(timeBin).sampleSum;
+			else {
+				countByHourOfWeek[hourOfWeek] += statsTimeBins.get(timeBin).sampleCount;
+				speedSumByHourOfWeek[hourOfWeek] += statsTimeBins.get(timeBin).sampleSum;
+			}
 		}
 		
 		

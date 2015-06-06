@@ -1,14 +1,12 @@
 package com.conveyal.traffic.stats;
 
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.util.concurrent.ConcurrentHashMap;
-
-import org.omg.CORBA_2_3.portable.OutputStream;
-
 import com.conveyal.traffic.data.ExchangeFormat;
 import com.conveyal.traffic.data.SpatialDataStore;
 import com.conveyal.traffic.geom.StreetSegment;
+
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.util.concurrent.ConcurrentHashMap;
 
 
 public class StatisticsCollector {
@@ -52,7 +50,7 @@ public class StatisticsCollector {
 							.setWayId(ss.wayId)
 							.setStartNodeId(ss.startNodeId)
 							.setEndNodeId(ss.endNodeId))
-					.setAverageSpeed(segmentStats.get(segmentId).collectBaselineStatisics().getAverageSpeedKMH()));
+					.setAverageSpeed((float) segmentStats.get(segmentId).collectBaselineStatisics().getAverageSpeedKMH()));
 		}
 		
 		os.write(tile.build().toByteArray());
