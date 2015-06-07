@@ -1,6 +1,8 @@
 package com.conveyal.traffic.stats;
 
-public class SegmentStatistics {
+import java.io.Serializable;
+
+public class SegmentStatistics implements Serializable {
 	
 	long sampleCount = 0;
 	double sampleSum = 0.0; 

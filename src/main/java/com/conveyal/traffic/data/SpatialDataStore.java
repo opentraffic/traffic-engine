@@ -45,13 +45,6 @@ public class SpatialDataStore {
 		if(!directory.exists())
 			directory.mkdirs();
 		
-		/*try {
-			Logger.info(directory.getCanonicalPath());
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}*/
-		
 		DBMaker dbm = DBMaker.newFileDB(new File(directory, dataFile + ".db"))
 			.closeOnJvmShutdown();
 		

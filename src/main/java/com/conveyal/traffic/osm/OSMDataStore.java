@@ -2,6 +2,8 @@ package com.conveyal.traffic.osm;
 
 import java.awt.geom.Point2D;
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -14,10 +16,14 @@ import org.geotools.referencing.GeodeticCalculator;
 
 import com.conveyal.osmlib.OSM;
 import com.conveyal.osmlib.Way;
+import com.conveyal.traffic.data.ExchangeFormat;
 import com.conveyal.traffic.data.SpatialDataItem;
 import com.conveyal.traffic.data.SpatialDataStore;
 import com.conveyal.traffic.geom.StreetSegment;
 import com.conveyal.traffic.geom.TripLine;
+import com.conveyal.traffic.stats.BaselineStatistics;
+import com.conveyal.traffic.stats.SegmentTimeBins;
+import com.conveyal.traffic.stats.SpeedSample;
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.Envelope;
 import com.vividsolutions.jts.geom.GeometryFactory;
@@ -154,7 +160,7 @@ public class OSMDataStore {
 				continue;
 			}
 			
-			// Check to make sure it's an acceptable type of highway
+			// ` to make sure it's an acceptable type of highway
 			String[] motorwayTypes = {"motorway","trunk",
 					"primary","secondary","tertiary","unclassified",
 					"residential","service","motorway_link","trunk_link",
@@ -324,6 +330,47 @@ public class OSMDataStore {
 		}
 
 		return d;
+	}
+	
+	public StreetSegment getStreetSegmentById(String id) {
+		return (StreetSegment)streetSegments.getById(id);
+	}
+	
+	public void addSpeedSample(SpeedSample speedSample) {			
+		this.getStreetSegmentById(speedSample.getSegmentId()).addSample(speedSample);
+	}
+
+	public BaselineStatistics getSegmentStatistics(String segmentId) {	
+		return this.getStreetSegmentById(segmentId).segmentStats.collectBaselineStatisics(); 
+	}
+	
+	public void collectStatistcs(FileOutputStream os, Envelope env) throws IOException {
+		
+		ExchangeFormat.BaselineTile.Builder tile = ExchangeFormat.BaselineTile.newBuilder();
+		
+		tile.setHeader(ExchangeFormat.Header.newBuilder()
+				.setCreationTimestamp(System.currentTimeMillis())
+				.setOsmCommitId(1)
+				.setTileX(1)
+				.setTileY(1)
+				.setTileZ(1));
+		
+		for(SpatialDataItem sdi : getStreetSegments(env)) {
+			StreetSegment streetSegment = (StreetSegment)sdi;
+					
+			BaselineStatistics baseline = streetSegment.segmentStats.collectBaselineStatisics();
+			
+			tile.addSegments(ExchangeFormat.BaselineStats.newBuilder()
+					.setSegment(ExchangeFormat.SegmentDefinition.newBuilder()
+							.setWayId(streetSegment.wayId)
+							.setStartNodeId(streetSegment.startNodeId)
+							.setEndNodeId(streetSegment.endNodeId))
+					.setAverageSpeed((float)baseline.getAverageSpeedKMH())
+					.addAllHourOfWeekAverages(baseline.getAllHourlySpeedsKMHFloatAL()));
+		}
+		
+		os.write(tile.build().toByteArray());
+		os.flush();
 	}
 	
 }

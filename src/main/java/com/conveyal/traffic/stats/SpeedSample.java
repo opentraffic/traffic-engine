@@ -4,7 +4,7 @@ import java.io.Serializable;
 
 import com.conveyal.traffic.geom.Crossing;
 
-public class SpeedSample{
+public class SpeedSample implements Serializable {
 	
 	final long time;
 	final String segmentId;

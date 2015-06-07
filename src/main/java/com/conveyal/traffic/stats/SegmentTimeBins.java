@@ -2,9 +2,10 @@ package com.conveyal.traffic.stats;
 
 import org.joda.time.DateTime;
 
+import java.io.Serializable;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class SegmentTimeBins {
+public class SegmentTimeBins implements Serializable{
 	
 	public static int HOURS_IN_WEEK = 7 * 24;
 	

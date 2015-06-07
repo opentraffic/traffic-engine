@@ -1,5 +1,6 @@
 package com.conveyal.traffic.stats;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 
 public class BaselineStatistics {
@@ -32,5 +33,26 @@ public class BaselineStatistics {
 
 	public double getSpeedByHourOfWeekKMH(int hour) {
 		return getSpeedByHourOfWeekMS(hour) * MS_TO_KMH;
+	}
+	
+	public double[] getAllHourlySpeedsKMH() {
+		
+		double speedByHourOfWeekKMH[] = new double[SegmentTimeBins.HOURS_IN_WEEK];
+		
+		for(int i = 0; i < SegmentTimeBins.HOURS_IN_WEEK; i++) {
+			speedByHourOfWeekKMH[i] = speedByHourOfWeek[i] * MS_TO_KMH;
+		}
+		return speedByHourOfWeekKMH;
+	}
+	
+	// convenience function for protobuf export
+	public ArrayList<Float> getAllHourlySpeedsKMHFloatAL() {
+		
+		ArrayList<Float> speedByHourOfWeekKMH = new ArrayList<Float>();
+		
+		for(int i = 0; i < SegmentTimeBins.HOURS_IN_WEEK; i++) {
+			speedByHourOfWeekKMH.add((float)(speedByHourOfWeek[i] * MS_TO_KMH));
+		}
+		return speedByHourOfWeekKMH;
 	}
 }

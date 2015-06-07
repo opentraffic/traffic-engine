@@ -33,7 +33,6 @@ import com.conveyal.traffic.geom.TripLine;
 import com.conveyal.traffic.osm.OSMDataStore;
 import com.conveyal.traffic.stats.BaselineStatistics;
 import com.conveyal.traffic.stats.SpeedSample;
-import com.conveyal.traffic.stats.StatisticsCollector;
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.Envelope;
 import com.vividsolutions.jts.geom.LineString;
@@ -47,7 +46,7 @@ public class TrafficEngine {
 	
 	VehicleState vehicleState;
 	
-	StatisticsCollector statsCollector = new StatisticsCollector();
+	//StatisticsCollector statsCollector = new StatisticsCollector();
 	
 	Map<TripLine, Integer> tripEvents = new HashMap<TripLine, Integer>();
 	Envelope engineEnvelope = new Envelope();
@@ -89,21 +88,21 @@ public class TrafficEngine {
 			return 0;
 		
 		for(SpeedSample speedSample : speedSamples)
-			statsCollector.addSpeedSample(speedSample);
+			osmData.addSpeedSample(speedSample);
 		
 		return speedSamples.size();
 		
 	}
 	
 	public BaselineStatistics getSegementStatistics(String segmentId){
-		return statsCollector.getSegmentStatistics(segmentId);
+		return osmData.getSegmentStatistics(segmentId);
 	}
 	
-	public void writeStatistics(File statsFile) {
+	public void writeStatistics(File statsFile, Envelope env) {
 		
 		try {
 			FileOutputStream fileOut = new FileOutputStream(statsFile);
-			statsCollector.collectStatistcs(fileOut, osmData.streetSegments);
+			osmData.collectStatistcs(fileOut, env);
 			
 			fileOut.close();
 			
