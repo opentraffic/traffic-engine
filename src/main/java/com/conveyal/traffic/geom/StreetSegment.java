@@ -31,9 +31,11 @@ public class StreetSegment extends SpatialDataItem {
 	
 	final public int streetType;
 	
-	public SegmentTimeBins segmentStats = new SegmentTimeBins();
-
+	public SegmentTimeBins segmentStats;
+	
 	public StreetSegment(long wayId,long startNodeId, long endNodeId, Way way, LineString geometry, double length, boolean oneway) {
+		
+		this.segmentStats = new SegmentTimeBins();
 		
 		this.wayId = wayId;
 		this.startNodeId = startNodeId;

@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.geotools.referencing.GeodeticCalculator;
 
@@ -56,6 +57,9 @@ public class OSMDataStore {
 	public List<Envelope> osmSubEnvelopes = new ArrayList<Envelope>();
 	
 	private Quadtree tripLineIndex = new Quadtree();
+	
+	private ConcurrentHashMap<String,Boolean> segmentsChanged = new ConcurrentHashMap<String,Boolean>();
+	private Integer speedSampleCount = 0;
 	
 	public OSMDataStore(File dataPath) {
 		triplines = new SpatialDataStore(dataPath, "tripline", false, false, true);
@@ -337,7 +341,24 @@ public class OSMDataStore {
 	}
 	
 	public void addSpeedSample(SpeedSample speedSample) {			
+		
 		this.getStreetSegmentById(speedSample.getSegmentId()).addSample(speedSample);
+		
+		segmentsChanged.put(speedSample.getSegmentId(), true);
+		
+		synchronized(speedSampleCount) {
+			speedSampleCount++;
+			
+			if(speedSampleCount > 1000) {
+				System.out.println("saving 1000 speed samples...");
+				for(String segmentId : segmentsChanged.keySet()){
+					this.streetSegments.save(this.getStreetSegmentById(segmentId));
+				}
+				segmentsChanged.clear();
+				speedSampleCount = 0;
+				this.streetSegments.commit();
+			}
+		}
 	}
 
 	public BaselineStatistics getSegmentStatistics(String segmentId) {	
@@ -359,6 +380,10 @@ public class OSMDataStore {
 			StreetSegment streetSegment = (StreetSegment)sdi;
 					
 			BaselineStatistics baseline = streetSegment.segmentStats.collectBaselineStatisics();
+			
+			// skip segments without data
+			if(Double.isNaN(baseline.getAverageSpeedMS()))
+				continue;
 			
 			tile.addSegments(ExchangeFormat.BaselineStats.newBuilder()
 					.setSegment(ExchangeFormat.SegmentDefinition.newBuilder()

@@ -4,8 +4,8 @@ import java.io.Serializable;
 
 public class SegmentStatistics implements Serializable {
 	
-	long sampleCount = 0;
-	double sampleSum = 0.0; 
+	public long sampleCount = 0;
+	public double sampleSum = 0.0; 
 	
 	public void addSample(SpeedSample ss) {
 		sampleCount++;

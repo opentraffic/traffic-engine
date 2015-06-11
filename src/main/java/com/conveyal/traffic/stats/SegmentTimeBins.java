@@ -11,7 +11,7 @@ public class SegmentTimeBins implements Serializable{
 	
 	public static long BIN_SIZE = 15 * 60 * 1000; // in ms, default 15 minute time bin
 
-	ConcurrentHashMap<Long,SegmentStatistics> statsTimeBins = new ConcurrentHashMap<Long,SegmentStatistics>();
+	public ConcurrentHashMap<Long,SegmentStatistics> statsTimeBins = new ConcurrentHashMap<Long,SegmentStatistics>();
 	
 
 	public void addSample(SpeedSample ss) {
