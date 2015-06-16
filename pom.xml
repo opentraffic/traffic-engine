@@ -19,7 +19,22 @@
         </configuration>
       </plugin>
     </plugins>
+     <extensions>
+      <extension>
+        <groupId>org.springframework.build</groupId>
+        <artifactId>aws-maven</artifactId>
+        <version>5.0.0.RELEASE</version>
+      </extension>
+    </extensions>
   </build>
+    <distributionManagement>
+     <repository>
+            <!-- Also used as snapshotRepository by default -->
+            <id>conveyal-maven-repo</id>
+            <name>Conveyal Maven Repository</name>
+            <url>s3://maven.conveyal.com/</url>
+      </repository>
+    </distributionManagement>
   <repositories>
     <repository>
       <id>conveyal</id>
