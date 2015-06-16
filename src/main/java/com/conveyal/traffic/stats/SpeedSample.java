@@ -23,6 +23,10 @@ public class SpeedSample implements Serializable {
 	public String getSegmentId() {
 		return this.segmentId;
 	}
+
+	public long getTime() {
+		return this.time;
+	}
 	
 	public double getSpeed() {
 		return this.speed;

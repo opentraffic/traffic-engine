@@ -16,12 +16,20 @@ import com.vividsolutions.jts.geom.LineString;
 import com.vividsolutions.jts.linearref.LengthIndexedLine;
 
 public class StreetSegment extends SpatialDataItem {
-	
+
+	// osm way highway tag values for roadway types
+	static String[] primaryTypes = {"motorway","trunk","primary","motorway_link"};
+	static String[] secondaryTypes = {"secondary"};
+	static String[] tertiaryTypes = {"tertiary"};
+	static String[] residentialTypes = {"residential"};
+
 	public static int TYPE_PRIMARY = 1;
 	public static int TYPE_SECONDARY = 2;
 	public static int TYPE_TERTIARY = 3;
-	public static int TYPE_OTHER = 4;
-	
+	public static int TYPE_RESIDENTIAL = 4;
+	public static int TYPE_OTHER = 5;
+	public static int TYPE_NON_ROADWAY = -1;
+
 	//final public Way way;
 	final public long startNodeId; // first node id 
 	final public long endNodeId; // last node id, inclusive
@@ -33,8 +41,11 @@ public class StreetSegment extends SpatialDataItem {
 	
 	public SegmentTimeBins segmentStats;
 	
-	public StreetSegment(long wayId,long startNodeId, long endNodeId, Way way, LineString geometry, double length, boolean oneway) {
-		
+	public StreetSegment(Way way, long wayId,long startNodeId, long endNodeId, LineString geometry, double length) {
+
+		this.streetType = getRodwayType(way);
+		this.oneway = isOneWay(way);
+
 		this.segmentStats = new SegmentTimeBins();
 		
 		this.wayId = wayId;
@@ -44,39 +55,9 @@ public class StreetSegment extends SpatialDataItem {
 		this.geometry = geometry;
 		
 		this.length = length;
-		this.oneway = oneway;
-		
-		this.id = this.toString();
-	
-		// Check to make sure it's a highway
-		String highwayType = way.getTag("highway");
-		
-		// Check to make sure it's an acceptable type of highway
-		String[] primaryTypes = {"motorway","trunk",
-				"primary","motorway_link"};
-		
-		// Check to make sure it's an acceptable type of highway
-		String[] secondaryTypes = {"secondary"};
-		
-		// Check to make sure it's an acceptable type of highway
-		String[] tertiaryTypes = {"tertiary"};
-		
-		// Check to make sure it's an acceptable type of highway
-		String[] otherTypes = {"unclassified","residential","service",};
-	
-		
-		if(OSMDataStore.among(highwayType,primaryTypes) ){
-			streetType = TYPE_PRIMARY;
-		}
-		else if(OSMDataStore.among(highwayType,secondaryTypes) ){
-			streetType = TYPE_SECONDARY;
-		}
-		else if(OSMDataStore.among(highwayType,tertiaryTypes) ){
-			streetType = TYPE_TERTIARY;
-		}
-		else {
-			streetType = TYPE_OTHER;
-		}
+		// create composite segmentId
+		this.id = this.toString();;
+
 	}
 	
 	public List<TripLine> generateTripLines() {
@@ -104,6 +85,41 @@ public class StreetSegment extends SpatialDataItem {
 	
 	public String toString() {
 		return "ss_" + this.wayId + ":" + this.startNodeId + "-" + this.endNodeId;
+	}
+
+	static public boolean isOneWay(Way way) {
+		return way.tagIsTrue("oneway") ||
+				(way.hasTag("highway") && way.getTag("highway").equals("motorway")) ||
+				(way.hasTag("junction") && way.getTag("junction").equals("roundabout"));
+	}
+
+	static public int getRodwayType(Way way) {
+
+		String highwayType = way.getTag("highway");
+
+		if (highwayType == null)
+			return TYPE_NON_ROADWAY;
+
+		if (OSMDataStore.among(highwayType, primaryTypes))
+			return TYPE_PRIMARY;
+		else if (OSMDataStore.among(highwayType, secondaryTypes))
+			return TYPE_SECONDARY;
+		else if (OSMDataStore.among(highwayType, tertiaryTypes))
+			return TYPE_TERTIARY;
+		else if (OSMDataStore.among(highwayType, residentialTypes))
+			return TYPE_RESIDENTIAL;
+		else
+			return TYPE_OTHER;
+	}
+
+	static public boolean isTrafficEdge(Way way) {
+
+		int type = getRodwayType(way);
+
+		if(type == TYPE_PRIMARY || type == TYPE_SECONDARY || type == TYPE_TERTIARY || type == TYPE_RESIDENTIAL)
+			return true;
+		else
+			return false;
 	}
 
 }

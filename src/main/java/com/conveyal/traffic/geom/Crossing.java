@@ -24,7 +24,11 @@ public class Crossing{
 
 	public boolean completedBy(Crossing nextCrossing) {
 		
-		if(this.tripline.segmentId.equals(nextCrossing.tripline.segmentId)){
+		if(!this.tripline.segmentId.equals(nextCrossing.tripline.segmentId)){
+			return false;
+		}
+
+		if(this.tripline.triplineIndex > nextCrossing.tripline.triplineIndex){
 			return false;
 		}
 		

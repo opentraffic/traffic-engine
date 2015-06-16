@@ -9,7 +9,7 @@ public class SegmentTimeBins implements Serializable{
 	
 	public static int HOURS_IN_WEEK = 7 * 24;
 	
-	public static long BIN_SIZE = 15 * 60 * 1000; // in ms, default 15 minute time bin
+	public static long BIN_SIZE = 15 * 60; // in seconds, default 15 minute time bin
 
 	public ConcurrentHashMap<Long,SegmentStatistics> statsTimeBins = new ConcurrentHashMap<Long,SegmentStatistics>();
 	

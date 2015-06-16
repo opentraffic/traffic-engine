@@ -1,9 +1,9 @@
 package com.conveyal.traffic.osm;
 
 import java.awt.geom.Point2D;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.*;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -12,7 +12,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
+import com.google.common.io.ByteStreams;
 import org.geotools.referencing.GeodeticCalculator;
 
 import com.conveyal.osmlib.OSM;
@@ -32,8 +35,12 @@ import com.vividsolutions.jts.geom.LineString;
 import com.vividsolutions.jts.geom.Point;
 import com.vividsolutions.jts.index.quadtree.Quadtree;
 import com.vividsolutions.jts.linearref.LengthIndexedLine;
+import org.mapdb.DB;
+import org.mapdb.DBMaker;
 
 public class OSMDataStore {
+
+	private static final Logger log = Logger.getLogger( OSMDataStore.class.getName());
 
 	// The distance from an intersection, measured along a road, where a tripline crosses.
 	public static final double INTERSECTION_MARGIN_METERS = 20;
@@ -51,23 +58,156 @@ public class OSMDataStore {
 	
 	// All triplines
 	public SpatialDataStore triplines;
-	
 	public SpatialDataStore streetSegments;
-	
-	public List<Envelope> osmSubEnvelopes = new ArrayList<Envelope>();
-	
-	private Quadtree tripLineIndex = new Quadtree();
-	
+	public SpatialDataStore osmCoverage;
+
+
 	private ConcurrentHashMap<String,Boolean> segmentsChanged = new ConcurrentHashMap<String,Boolean>();
 	private Integer speedSampleCount = 0;
-	
-	public OSMDataStore(File dataPath) {
+
+	private File osmPath;
+	private File dataPath;
+	private String osmServer;
+
+	public OSMDataStore(File dataPath, File osmPath, String osmServer) {
+
+		this.osmPath = osmPath;
+		this.dataPath = dataPath;
+		this.osmServer = osmServer;
+
 		triplines = new SpatialDataStore(dataPath, "tripline", false, false, true);
 		streetSegments = new SpatialDataStore(dataPath, "streets", false, false, true);
+		osmCoverage = new SpatialDataStore(dataPath, "osm", false, false, true);
+
+	}
+
+	public void loadOSMTile(int x, int y, int z) {
+
+		File zDir = new File(osmPath, "" + z);
+		File xDir = new File(zDir, "" + x);
+		File yPbfFile = new File(xDir, y + ".osm.pbf");
+
+		String osmId = z + "_" + x + "_" + y;
+
+		if(!yPbfFile.exists()) {
+			xDir.mkdirs();
+
+			Envelope env = tile2Envelope(x, y, z);
+
+			Double south = env.getMinY() < env.getMaxY() ? env.getMinY() : env.getMaxY();
+			Double west = env.getMinX() < env.getMaxX() ? env.getMinX() : env.getMaxX();
+			Double north = env.getMinY() > env.getMaxY() ? env.getMinY() : env.getMaxY();
+			Double east = env.getMinX() > env.getMaxX() ? env.getMinX() : env.getMaxX();
+
+			String vexUrl = osmServer + "";
+
+			if (!vexUrl.endsWith("/"))
+				vexUrl += "/";
+
+			vexUrl += String.format("?n=%s&s=%s&e=%s&w=%s", north, south, east, west);
+
+			HttpURLConnection conn;
+
+			log.log(Level.INFO, "loading osm from: " + vexUrl);
+
+			try {
+				conn = (HttpURLConnection) new URL(vexUrl).openConnection();
+
+				conn.connect();
+
+				if (conn.getResponseCode() != HttpURLConnection.HTTP_OK) {
+					System.err.println("Received response code " +
+							conn.getResponseCode() + " from vex server");
+
+					return;
+				}
+
+				// download the file
+				InputStream is = conn.getInputStream();
+				OutputStream os = new FileOutputStream(yPbfFile);
+				ByteStreams.copy(is, os);
+				is.close();
+				os.close();
+
+				loadPbfFile(osmId, yPbfFile);
+
+
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		else
+			loadPbfFile(osmId, yPbfFile);
+
+	}
+
+	public void loadPbfFile(String osmId, File pbfFile) {
+
+		if(osmCoverage.contains(osmId))
+			return;
+
+		log.log(Level.INFO, "loading osm from: " + pbfFile.getAbsolutePath());
+
+		// load pbf osm source and merge into traffic engine
+		OSM osm = new OSM(null);
+		osm.loadFromPBFFile(pbfFile.getAbsolutePath().toString());
+
+		try {
+			// add OSM an truncate geometries
+			OSMArea osmArea = addOsm(osmId, osm, false);
+
+			osmCoverage.save(osmArea);
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+			log.log(Level.SEVERE, "Unable to load osm: " + pbfFile.getAbsolutePath());
+		}
+
+
+	}
+
+
+	public void checkOsm(double lat, double lon) {
+		Envelope env1 = new Envelope();
+		env1.expandToInclude(lat, lon);
+		if(osmCoverage.getByEnvelope(env1).size() == 0)
+			loadOSMTile(lat,lon, 11);
+	}
+
+	public void loadOSMTile(double lat, double lon, int z) {
+		int xtile = (int)Math.floor( (lon + 180) / 360 * (1<<z) ) ;
+		int ytile = (int)Math.floor( (1 - Math.log(Math.tan(Math.toRadians(lat)) + 1 / Math.cos(Math.toRadians(lat))) / Math.PI) / 2 * (1<<z) ) ;
+
+		loadOSMTile(xtile, ytile, z);
+	}
+
+	public static String getTileNumber(final double lat, final double lon, final int zoom) {
+		int xtile = (int)Math.floor( (lon + 180) / 360 * (1<<zoom) ) ;
+		int ytile = (int)Math.floor( (1 - Math.log(Math.tan(Math.toRadians(lat)) + 1 / Math.cos(Math.toRadians(lat))) / Math.PI) / 2 * (1<<zoom) ) ;
+		return("" + zoom + "/" + xtile + "/" + ytile);
+	}
+
+
+	public static double tile2lon(int x, int z) {
+		return x / Math.pow(2.0, z) * 360.0 - 180;
+	}
+
+	public static double tile2lat(int y, int z) {
+		double n = Math.PI - (2.0 * Math.PI * y) / Math.pow(2.0, z);
+		return Math.toDegrees(Math.atan(Math.sinh(n)));
+	}
+
+	public static Envelope tile2Envelope(final int x, final int y, final int zoom) {
+		double maxLat = tile2lat(y, zoom);
+		double minLat = tile2lat(y + 1, zoom);
+		double minLon = tile2lon(x, zoom);
+		double maxLon = tile2lon(x + 1, zoom);
+		return new Envelope(minLon, maxLon, minLat, maxLat);
 	}
 	
-	public Envelope addOsm(OSM osm, Boolean keepCompleteGeometries) {
-		
+	private OSMArea addOsm(String osmId, OSM osm, Boolean keepCompleteGeometries) {
+
 		Envelope env = new Envelope();
 		
 		List<StreetSegment> segments = getStreetSegments(osm);
@@ -96,7 +236,7 @@ public class OSMDataStore {
 		streetSegments.commit();
 		triplines.commit();
 		
-		return env;
+		return new OSMArea(osmId, env);
 	}
 	
 	public List<SpatialDataItem> getStreetSegments(Envelope env) {
@@ -114,28 +254,32 @@ public class OSMDataStore {
 	 * @return
 	 */
 	private static Set<Long> findIntersections(OSM osm) {
-		Set<Long> ret = new HashSet<Long>();
+		Set<Long> intersectionNodes = new HashSet<>();
 
 		// link nodes to the ways that visit them
-		Map<Long, Integer> ndToWay = new HashMap<Long, Integer>();
+		Map<Long, Integer> nodeToWay = new HashMap<>();
 		for (Entry<Long, Way> wayEntry : osm.ways.entrySet()) {
 			Way way = wayEntry.getValue();
 
-			for (Long nd : way.nodes) {
-				Integer count = ndToWay.get(nd);
+			// only find intersections with other traffic edges
+			if(!StreetSegment.isTrafficEdge(way))
+				continue;
+
+			for (Long node : way.nodes) {
+				Integer count = nodeToWay.get(node);
 				if (count == null) {
-					ndToWay.put(nd, 1);
+					nodeToWay.put(node, 1);
 				} else {
 					// the non-first time you've seen a node, add it to the
 					// intersections set
 					// note after the first time the add will be redundant, but
 					// a duplicate add will have no effect
-					ret.add(nd);
+					intersectionNodes.add(node);
 				}
 			}
 		}
 
-		return ret;
+		return intersectionNodes;
 	}
 	
 	/**
@@ -150,33 +294,17 @@ public class OSMDataStore {
 		
 		Set<Long> intersectionNodes = findIntersections(osm);
 		
-		List<StreetSegment> newSegments = new ArrayList<StreetSegment>();
+		List<StreetSegment> newSegments = new ArrayList<>();
 
 		for( Entry<Long, Way> entry : osm.ways.entrySet() ) {
+
 			Long wayId = entry.getKey();
 			Way way  = entry.getValue();
-		
-			// Check to make sure it's a highway
-			String highwayType = way.getTag("highway");
-			
-			// skip ways without "highway" tags
-			if(highwayType == null) {
+
+			// only find segments for traffic edges
+			if(!StreetSegment.isTrafficEdge(way))
 				continue;
-			}
-			
-			// ` to make sure it's an acceptable type of highway
-			String[] motorwayTypes = {"motorway","trunk",
-					"primary","secondary","tertiary","unclassified",
-					"residential","service","motorway_link","trunk_link",
-					"primary_link","secondary_link","tertiary_link"};
-			if( !among(highwayType,motorwayTypes) ){
-				continue;
-			}
-			
-			boolean oneway = way.tagIsTrue("oneway") ||
-					 (way.hasTag("highway") && way.getTag("highway").equals("motorway")) || 
-					 (way.hasTag("junction") && way.getTag("junction").equals("roundabout"));
-			
+
 			LineString wayLineString;
 			
 			try {
@@ -184,17 +312,13 @@ public class OSMDataStore {
 			} catch (RuntimeException ex ){
 				continue;
 			}
-			
 
-			// Check that it's long enough
-			double wayLen = getLength(wayLineString); // meters
-			
 			double segmentDist = 0;
 			Long lastNodeId = null;
 			
 			Point lastPoint = null;
 			
-			List<Coordinate> segmentCords = new ArrayList<Coordinate>();
+			List<Coordinate> segmentCords = new ArrayList<>();
 			
 			for (int i = 0; i < way.nodes.length; i++) {
 				Long nodeId = way.nodes[i];
@@ -218,42 +342,29 @@ public class OSMDataStore {
 					// make segment
 					Coordinate[] segmentCoordArray = new Coordinate[segmentCords.size()];
  					
-					LineString segementGeometry = gf.createLineString(segmentCords.toArray(segmentCoordArray));
-					
-					newSegments.add(new StreetSegment(wayId, lastNodeId, nodeId, way, segementGeometry, segmentDist, oneway));
+					LineString segmentGeometry = gf.createLineString(segmentCords.toArray(segmentCoordArray));
+
+					StreetSegment streetSegment = new StreetSegment(way, wayId, lastNodeId, nodeId, segmentGeometry, segmentDist);
+					newSegments.add(streetSegment);
 					
 					// create reverse
-					if(!oneway) {
-						LineString reverseSegmentGeomestry = (LineString) segementGeometry.reverse();
-						newSegments.add(new StreetSegment(wayId, nodeId, lastNodeId, way, reverseSegmentGeomestry, segmentDist, oneway));
+					if(!streetSegment.oneway) {
+						LineString reverseSegmentGeometry = (LineString) segmentGeometry.reverse();
+						newSegments.add(new StreetSegment(way, wayId, nodeId, lastNodeId, reverseSegmentGeometry, segmentDist));
 					}
 					
-					// reset for next segement
-					segmentCords = new ArrayList<Coordinate>();
+					// reset for next segment
+					segmentCords = new ArrayList<>();
 					segmentCords.add(point.getCoordinate());
 					segmentDist = 0;
 					lastNodeId = nodeId;
 				}	
 			}
 		}
-		
+
+
+
 		return newSegments;
-	}
-	
-	/**
-	 * Get the length in meters of a line expressed in lat/lng pairs.
-	 * @param wayPath
-	 * @return
-	 */
-	private static double getLength(LineString wayPath) {
-		double ret = 0;
-		for (int i = 0; i < wayPath.getNumPoints() - 1; i++) {
-			Point p1 = wayPath.getPointN(i);
-			Point p2 = wayPath.getPointN(i + 1);
-			double dist = getDistance(p1.getX(), p1.getY(), p2.getX(), p2.getY());
-			ret += dist;
-		}
-		return ret;
 	}
 
 	/**

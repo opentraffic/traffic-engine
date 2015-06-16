@@ -7,7 +7,7 @@ import com.vividsolutions.jts.geom.LineString;
 
 public class GPSSegment {
 
-	private LineString geom;
+	public LineString geom;
 	GPSPoint p0;
 	GPSPoint p1;
 	public long vehicleId;

@@ -25,7 +25,13 @@ public class VehicleState {
 	public static final int MAX_GPS_PAIR_DURATION = 20;
 	
 	private Long latestTimestamp = 0l;
-	
+
+	private Boolean debug;
+
+	public List<Crossing> debugCrossings;
+	public List<TripLine> debugTripLines;
+	public GPSSegment debugGpsSegment;
+
 	OSMDataStore osmData;
 
 	//	====VEHICLE STATE=====
@@ -37,14 +43,12 @@ public class VehicleState {
 	Map<Long, Set<Crossing>> pendingCrossings = new ConcurrentHashMap<Long,Set<Crossing>>();
 	// (tripline1, tripline2) -> count of dropoff lines.
 
-	public VehicleState(OSMDataStore osmData) {
+	public VehicleState(OSMDataStore osmData, Boolean debug) {
 		this.osmData = osmData;
+		this.debug = debug;
 	}
 	
-	/**
-	 * Purge vehicle statistics based on wall clock time since last update 
-	 * @param purgeBefore purge all vehicles where last report was more than purgeBefore seconds (according to wall clock) since last update
-	 */
+
 	public Integer purge(Long purgeSeconds) {
 		
 		synchronized(lastPoint) {
@@ -98,6 +102,9 @@ public class VehicleState {
 
 		GPSSegment gpsSegment = new GPSSegment(p0, gpsPoint);
 
+		if(debug)
+			this.debugGpsSegment = gpsSegment;
+
 		// if the segment is sitting still, it can't cross a tripline
 		if (gpsSegment.isStill()) {
 			return null;
@@ -105,10 +112,12 @@ public class VehicleState {
 		
 		List<Crossing> segCrossings = getCrossingsInOrder(gpsSegment);
 
-		List<SpeedSample> speedSampels = new ArrayList<SpeedSample>();
+		if(debug)
+			debugCrossings = segCrossings;
+
+
+		List<SpeedSample> speedSamples = new ArrayList<SpeedSample>();
 		for (Crossing crossing : segCrossings) {
-			
-			//recordCrossingCount(crossing.tripline);
 			
 			Crossing lastCrossing = getLastCrossingAndUpdatePendingCrossings(gpsPoint.vehicleId, crossing);
 			
@@ -116,11 +125,11 @@ public class VehicleState {
 			if(ss==null){
 				continue;
 			}
-			
-			speedSampels.add( ss );
+
+			speedSamples.add( ss );
 			
 		}
-		return speedSampels;
+		return speedSamples;
 	}
 	
 	private List<Crossing> getCrossingsInOrder(GPSSegment gpsSegment) {
@@ -128,8 +137,15 @@ public class VehicleState {
 		List<Crossing> ret = new ArrayList<Crossing>();
 		
 		List<?> tripLines = this.osmData.getTripLines(gpsSegment.getEnvelope());
+
+		if(debug)
+			this.debugTripLines = new ArrayList<TripLine>();
+
 		for (Object tlObj : tripLines) {
 			TripLine tl = (TripLine) tlObj;
+
+			if(debug)
+				this.debugTripLines.add(tl);
 	
 			Crossing crossing = gpsSegment.getCrossing(tl);
 	
@@ -186,7 +202,7 @@ public class VehicleState {
 		}
 
 		SpeedSample ss = new SpeedSample(lastCrossing.getTime(), lastCrossing.tripline.segmentId, speed);
-		
+
 		return ss;
 	}
 
@@ -247,7 +263,10 @@ public class VehicleState {
 		}
 		
 		// this crossing is now a pending crossing
-		vehiclePendingCrossings.add( crossing );
+		if(crossing.tripline.triplineIndex == 1) {
+			vehiclePendingCrossings.add(crossing);
+			pendingCrossings.put(vehicleId, vehiclePendingCrossings);
+		}
 		return lastCrossing;
 	}
 

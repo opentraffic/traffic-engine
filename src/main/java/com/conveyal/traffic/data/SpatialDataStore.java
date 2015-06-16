@@ -150,9 +150,14 @@ public class SpatialDataStore {
 	
 	public List<SpatialDataItem> getByEnvelope(Envelope env) {
 		
-		List<SpatialDataItem> items = spatialIndex.query(env);
-		
-		return items; 
+		List<SpatialDataItem> possibleItems = spatialIndex.query(env);
+		List<SpatialDataItem> actualItems = new ArrayList<>();
+
+		for(SpatialDataItem item : possibleItems)
+			if(env.intersects(item.geometry.getEnvelopeInternal()))
+				actualItems.add(item);
+
+		return actualItems;
 		
 	}
 	
@@ -162,7 +167,9 @@ public class SpatialDataStore {
 	
 	public void reindex() {	
 		 for(SpatialDataItem obj : getAll()) {
-			 spatialIndex.insert(obj.geometry.getEnvelopeInternal(), obj);
+			 Envelope env = obj.geometry.getEnvelopeInternal();
+			 if(env.getArea() > 0)
+			 	spatialIndex.insert(env, obj);
 		 }
 		 
 	}

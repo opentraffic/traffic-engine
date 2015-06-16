@@ -18,6 +18,7 @@ import java.util.Set;
 
 import ch.qos.logback.classic.Logger;
 
+import com.sun.tools.doclint.Env;
 import com.vividsolutions.jts.geom.*;
 
 import org.geotools.referencing.GeodeticCalculator;
@@ -39,29 +40,30 @@ import com.vividsolutions.jts.geom.LineString;
 import com.vividsolutions.jts.geom.Point;
 import com.vividsolutions.jts.index.quadtree.Quadtree;
 import com.vividsolutions.jts.linearref.LengthIndexedLine;
+import sun.java2d.pipe.SpanIterator;
 
 public class TrafficEngine {
 	
 	OSMDataStore osmData;
 	
 	VehicleState vehicleState;
-	
-	//StatisticsCollector statsCollector = new StatisticsCollector();
-	
-	Map<TripLine, Integer> tripEvents = new HashMap<TripLine, Integer>();
+
 	Envelope engineEnvelope = new Envelope();
 
-	public TrafficEngine(File dataPath){
-		osmData = new OSMDataStore(dataPath);
-		vehicleState = new VehicleState(osmData);
+	public Boolean debug = false;
+
+	public TrafficEngine(File dataPath, File osmPath, String osmServer){
+		osmData = new OSMDataStore(dataPath, osmPath, osmServer);
+		vehicleState = new VehicleState(osmData, false);
 	}
 
-	public Envelope addOsm(OSM osm, Boolean keepCompleteGeometries) {
-		return osmData.addOsm(osm, keepCompleteGeometries);
+	public TrafficEngine(File dataPath, File osmPath, String osmServer, Boolean debug){
+		osmData = new OSMDataStore(dataPath, osmPath, osmServer);
+		vehicleState = new VehicleState(osmData, debug);
 	}
-	
-	public Coordinate getCenterPoint() {
-		return engineEnvelope.centre();
+
+	public void checkOsm(double lat, double lon) {
+		osmData.checkOsm(lat,lon);
 	}
 
 	public Envelope getBounds() {
@@ -75,23 +77,31 @@ public class TrafficEngine {
 	public List<SpatialDataItem> getStreetSegments(Envelope env) {
 		return osmData.getStreetSegments(env);
 	}
-	
+
+	public SpatialDataItem getStreetSegmentsById(String segementId) {
+		return osmData.getStreetSegmentById(segementId);
+	}
+
 	public List<SpatialDataItem> getTripLines(Envelope env) {
 		return osmData.getTripLines(env);
 	}
-	
+
+	public List<SpeedSample> updateAndGetSample(GPSPoint gpsPoint) {
+		return vehicleState.update(gpsPoint);
+	}
+
 	public int update(GPSPoint gpsPoint) {
-		
-		List<SpeedSample> speedSamples =  vehicleState.update(gpsPoint);
-		
-		if(speedSamples == null) 
+
+		List<SpeedSample> speedSamples =  updateAndGetSample(gpsPoint);
+
+		if(speedSamples == null)
 			return 0;
-		
+
 		for(SpeedSample speedSample : speedSamples)
 			osmData.addSpeedSample(speedSample);
-		
+
 		return speedSamples.size();
-		
+
 	}
 	
 	public BaselineStatistics getSegementStatistics(String segmentId){
@@ -112,8 +122,36 @@ public class TrafficEngine {
 		}
 	
 	}
-	
-	
+
+	public List<Crossing> getDebugCrossings() {
+		return this.vehicleState.debugCrossings;
+	}
+
+	public List<TripLine> getDebugTripLine() {
+		return this.vehicleState.debugTripLines;
+	}
+
+	public GPSSegment getDebugGpsSegment() {
+		return this.vehicleState.debugGpsSegment;
+	}
+
+
+	public List<Crossing> getDebugPendingCrossings() {
+		ArrayList<Crossing> crossings = new ArrayList<>();
+		for(Long key : this.vehicleState.pendingCrossings.keySet()) {
+			crossings.addAll(this.vehicleState.pendingCrossings.get(key));
+		}
+		return crossings;
+	}
+
+	public List<Envelope> getOsmEnvelopes() {
+		List<Envelope> envelopes = new ArrayList<>();
+		for(SpatialDataItem item : osmData.osmCoverage.getAll()) {
+			envelopes.add(item.geometry.getEnvelopeInternal());
+		}
+		return envelopes;
+	}
+
 //	public int getVehicleCount() {
 //		return lastPoint.keySet().size();
 //	}
