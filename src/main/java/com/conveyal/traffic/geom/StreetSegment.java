@@ -1,17 +1,11 @@
 package com.conveyal.traffic.geom;
 
-import java.awt.geom.Point2D;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
 
 import com.conveyal.osmlib.Way;
 import com.conveyal.traffic.data.SpatialDataItem;
 import com.conveyal.traffic.osm.OSMDataStore;
-import com.conveyal.traffic.stats.SegmentTimeBins;
-import com.conveyal.traffic.stats.SpeedSample;
-import com.vividsolutions.jts.geom.Coordinate;
-import com.vividsolutions.jts.geom.GeometryFactory;
 import com.vividsolutions.jts.geom.LineString;
 import com.vividsolutions.jts.linearref.LengthIndexedLine;
 
@@ -39,14 +33,10 @@ public class StreetSegment extends SpatialDataItem {
 	
 	final public int streetType;
 	
-	public SegmentTimeBins segmentStats;
-	
 	public StreetSegment(Way way, long wayId,long startNodeId, long endNodeId, LineString geometry, double length) {
 
 		this.streetType = getRodwayType(way);
 		this.oneway = isOneWay(way);
-
-		this.segmentStats = new SegmentTimeBins();
 		
 		this.wayId = wayId;
 		this.startNodeId = startNodeId;
@@ -56,7 +46,7 @@ public class StreetSegment extends SpatialDataItem {
 		
 		this.length = length;
 		// create composite segmentId
-		this.id = this.toString();;
+		this.id = this.toString();
 
 	}
 	
@@ -77,10 +67,6 @@ public class StreetSegment extends SpatialDataItem {
 	public void truncateGeometry() {
 		//GeometryFactory gf = new GeometryFactory();
 		//this.geometry = gf.createPoint(this.geometry.getCoordinate());
-	}
-	
-	public void addSample(SpeedSample speedSample) {
-		this.segmentStats.addSample(speedSample);
 	}
 	
 	public String toString() {

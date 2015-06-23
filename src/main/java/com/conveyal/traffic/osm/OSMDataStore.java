@@ -15,6 +15,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import com.conveyal.traffic.data.StatsDataStore;
 import com.google.common.io.ByteStreams;
 import org.geotools.referencing.GeodeticCalculator;
 
@@ -25,18 +26,14 @@ import com.conveyal.traffic.data.SpatialDataItem;
 import com.conveyal.traffic.data.SpatialDataStore;
 import com.conveyal.traffic.geom.StreetSegment;
 import com.conveyal.traffic.geom.TripLine;
-import com.conveyal.traffic.stats.BaselineStatistics;
-import com.conveyal.traffic.stats.SegmentTimeBins;
+import com.conveyal.traffic.stats.SummaryStatistics;
 import com.conveyal.traffic.stats.SpeedSample;
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.Envelope;
 import com.vividsolutions.jts.geom.GeometryFactory;
 import com.vividsolutions.jts.geom.LineString;
 import com.vividsolutions.jts.geom.Point;
-import com.vividsolutions.jts.index.quadtree.Quadtree;
 import com.vividsolutions.jts.linearref.LengthIndexedLine;
-import org.mapdb.DB;
-import org.mapdb.DBMaker;
 
 public class OSMDataStore {
 
@@ -60,6 +57,7 @@ public class OSMDataStore {
 	public SpatialDataStore triplines;
 	public SpatialDataStore streetSegments;
 	public SpatialDataStore osmCoverage;
+	public StatsDataStore statsDataStore;
 
 
 	private ConcurrentHashMap<String,Boolean> segmentsChanged = new ConcurrentHashMap<String,Boolean>();
@@ -78,6 +76,7 @@ public class OSMDataStore {
 		triplines = new SpatialDataStore(dataPath, "tripline", false, false, true);
 		streetSegments = new SpatialDataStore(dataPath, "streets", false, false, true);
 		osmCoverage = new SpatialDataStore(dataPath, "osm", false, false, true);
+		statsDataStore = new StatsDataStore(dataPath);
 
 	}
 
@@ -151,7 +150,7 @@ public class OSMDataStore {
 
 		// load pbf osm source and merge into traffic engine
 		OSM osm = new OSM(null);
-		osm.loadFromPBFFile(pbfFile.getAbsolutePath().toString());
+		osm.readFromFile(pbfFile.getAbsolutePath().toString());
 
 		try {
 			// add OSM an truncate geometries
@@ -451,34 +450,17 @@ public class OSMDataStore {
 		return (StreetSegment)streetSegments.getById(id);
 	}
 	
-	public void addSpeedSample(SpeedSample speedSample) {			
-		
-		this.getStreetSegmentById(speedSample.getSegmentId()).addSample(speedSample);
-		
-		segmentsChanged.put(speedSample.getSegmentId(), true);
-		
-		synchronized(speedSampleCount) {
-			speedSampleCount++;
-			
-			if(speedSampleCount > 1000) {
-				System.out.println("saving 1000 speed samples...");
-				for(String segmentId : segmentsChanged.keySet()){
-					this.streetSegments.save(this.getStreetSegmentById(segmentId));
-				}
-				segmentsChanged.clear();
-				speedSampleCount = 0;
-				this.streetSegments.commit();
-			}
-		}
+	public void addSpeedSample(SpeedSample speedSample) {
+		statsDataStore.addSpeedSample(speedSample);
 	}
 
-	public BaselineStatistics getSegmentStatistics(String segmentId) {	
-		return this.getStreetSegmentById(segmentId).segmentStats.collectBaselineStatisics(); 
+	public SummaryStatistics collectSummaryStatisics(String segmentId) {
+		return statsDataStore.collectSummaryStatisics(segmentId);
 	}
 	
 	public void collectStatistcs(FileOutputStream os, Envelope env) throws IOException {
 		
-		ExchangeFormat.BaselineTile.Builder tile = ExchangeFormat.BaselineTile.newBuilder();
+		/*ExchangeFormat.BaselineTile.Builder tile = ExchangeFormat.BaselineTile.newBuilder();
 		
 		tile.setHeader(ExchangeFormat.Header.newBuilder()
 				.setCreationTimestamp(System.currentTimeMillis())
@@ -490,7 +472,7 @@ public class OSMDataStore {
 		for(SpatialDataItem sdi : getStreetSegments(env)) {
 			StreetSegment streetSegment = (StreetSegment)sdi;
 					
-			BaselineStatistics baseline = streetSegment.segmentStats.collectBaselineStatisics();
+			SummaryStatistics baseline = streetSegment.segmentStats.collectBaselineStatisics();
 			
 			// skip segments without data
 			if(Double.isNaN(baseline.getAverageSpeedMS()))
@@ -506,7 +488,7 @@ public class OSMDataStore {
 		}
 		
 		os.write(tile.build().toByteArray());
-		os.flush();
+		os.flush();*/
 	}
 	
 }

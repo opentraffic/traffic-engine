@@ -60,65 +60,9 @@ public class SpatialDataStore {
 	    
 	    // this probably ought to cache the serializer.
 	    //if (useJavaSerialization)
-	    //	maker = maker.valueSerializer(new ClassLoaderSerializer());
+	    maker = maker.valueSerializer(new ClassLoaderSerializer());
 	    
 		map = maker.makeOrGet();
-		
-		reindex();
-	}
-	
-	// TODO: add all the other arguments about what kind of serialization, transactions, etc.
-	public SpatialDataStore(File directory, String dataFile, List<Fun.Tuple2<String,SpatialDataItem>>inputData) {
-		
-		if(!directory.exists())
-			directory.mkdirs();
-		
-		/*try {
-			Logger.info(directory.getCanonicalPath());
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}*/
-		
-		db = DBMaker.newFileDB(new File(directory, dataFile + ".db"))
-			.transactionDisable()
-			.closeOnJvmShutdown()
-	        .make();
-        
-		Comparator<Tuple2<String, SpatialDataItem>> comparator = new Comparator<Fun.Tuple2<String,SpatialDataItem>>(){
-
-			@Override
-			public int compare(Tuple2<String, SpatialDataItem> o1,
-					Tuple2<String, SpatialDataItem> o2) {
-				return o1.a.compareTo(o2.a);
-			}
-		};
-
-		// need to reverse sort list
-		Iterator<Fun.Tuple2<String,SpatialDataItem>> iter = Pump.sort(inputData.iterator(),
-                true, 100000,
-                Collections.reverseOrder(comparator), //reverse  order comparator
-                db.getDefaultSerializer()
-                );
-		
-		
-		BTreeKeySerializer<String> keySerializer = BTreeKeySerializer.STRING;
-		
-		map = db.createTreeMap(dataFile)
-        	.pumpSource(iter)
-        	.pumpPresort(100000) 
-        	.keySerializer(keySerializer)
-        	.make();
-		
-		// close/flush db 
-		db.close();
-		
-		// re-connect with transactions enabled
-		db = DBMaker.newFileDB(new File(directory, dataFile + ".db"))
-				.closeOnJvmShutdown()
-		        .make();
-		
-		map = db.getTreeMap(dataFile);
 		
 		reindex();
 	}

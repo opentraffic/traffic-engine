@@ -201,7 +201,7 @@ public class VehicleState {
 			return null; // any speed sample above MAX_SPEED is assumed to be GPS junk.
 		}
 
-		SpeedSample ss = new SpeedSample(lastCrossing.getTime(), lastCrossing.tripline.segmentId, speed);
+		SpeedSample ss = new SpeedSample(lastCrossing.getTime(), speed, lastCrossing.tripline.segmentId);
 
 		return ss;
 	}
@@ -219,39 +219,7 @@ public class VehicleState {
 		for( Crossing vehiclePendingCrossing : vehiclePendingCrossings ){
 			if( vehiclePendingCrossing.completedBy( crossing ) ){
 				lastCrossing = vehiclePendingCrossing;
-				
-				// when a pending crossing is completed, a bunch of pending crossing are left
-				// that will never be completed. These pending crossings are "drop-off points", 
-				// where a GPS trace tripped a line but somehow dropped off the line segment between
-				// a pair of trippoints, never to complete it. We can record the tripline that
-				// _started_ the pair that was eventually completed as the place where the drop-off
-				// was picked back up. By doing this we can identify OSM locations with poor connectivity
-				
-//				TripLine pickUp = lastCrossing.getTripline();
-//				for( Crossing dropOffCrossing : vehiclePendingCrossings ){
-//					if( lastCrossing.equals( pickUp ) ){
-//						continue;
-//					}
-//					
-//					TripLine dropOff = dropOffCrossing.getTripline();
-//					
-//					//if( pickUp.wayId==dropOff.wayId && pickUp.tlClusterIndex==dropOff.tlClusterIndex ){
-//					if( pickUp.wayId==dropOff.wayId ){
-//						continue;
-//					}
-//					
-//					Map<TripLine,Integer> pickups = dropOffs.get( dropOff );
-//					if(pickups==null){
-//						pickups = new HashMap<TripLine,Integer>();
-//						dropOffs.put( dropOff, pickups );
-//					}
-//					Integer pickupCount = pickups.get( pickUp );
-//					if(pickupCount==null){
-//						pickupCount = 0;
-//					}
-//					pickups.put(pickUp, pickupCount+1);
-//					
-//				}
+
 				
 				// if this crossing completes a pending crossing, then this crossing
 				// wins and all other pending crossings are deleted
@@ -270,27 +238,5 @@ public class VehicleState {
 		return lastCrossing;
 	}
 
-//	private void recordCrossingCount(TripLine tripline) {
-//		// record a crossing count for each tripline. Comes in handy, especially for
-//		// dropoff analysis
-//		if( !tripEvents.containsKey( tripline ) ){
-//			tripEvents.put( tripline, 0 );
-//		}
-//		tripEvents.put( tripline, tripEvents.get(tripline)+1 );
-//	}
-
-
-
-//	public Map<TripLine, Map<TripLine,Integer>> getDropOffs() {
-//		return this.dropOffs;
-//	}
-//
-//	public int getNTripEvents(TripLine dropOff) {
-//		Integer ret = this.tripEvents.get( dropOff );
-//		if(ret == null ){
-//			return 0;
-//		}
-//		return ret;
-//	}
 	
 }

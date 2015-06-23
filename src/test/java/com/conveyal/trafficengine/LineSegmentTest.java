@@ -15,4 +15,6 @@ public class LineSegmentTest extends TestCase {
 		
 		assertEquals( 0.5, ls2.intersectionDistance( ls1 ) );
 	}
+
+
 }

@@ -3,25 +3,27 @@
 import java.io.Serializable;
 
 import com.conveyal.traffic.geom.Crossing;
+import com.conveyal.traffic.geom.StreetSegment;
 
-public class SpeedSample implements Serializable {
-	
+ public class SpeedSample implements Serializable {
+
+	final String streetSegmentId;
+
 	final long time;
-	final String segmentId;
 	final double speed;
 
-	public SpeedSample(long time, String segmentId, double speed) {
+	public SpeedSample(long time, double speed, String streetSegmentId) {
+		this.streetSegmentId = streetSegmentId;
 		this.time = time;
-		this.segmentId = segmentId;
 		this.speed = speed;
 	}
 
 	public String toString() {
-		return "[SpeedSample:" + segmentId + " speed:" + speed + "]";
+		return "[SpeedSample:" + streetSegmentId + " speed:" + speed + "]";
 	}
 
 	public String getSegmentId() {
-		return this.segmentId;
+		return this.streetSegmentId;
 	}
 
 	public long getTime() {
