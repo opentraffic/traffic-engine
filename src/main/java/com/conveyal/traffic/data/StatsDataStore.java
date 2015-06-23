@@ -26,7 +26,7 @@ public class StatsDataStore {
 
 	ExecutorService executor;
 
-	Map<Long,Map<String,SegmentStatistics>> weekHourMap = new ConcurrentHashMap<>();
+	Map<String, Object> weekHourMap = new ConcurrentHashMap<>();
 	Map<String,SegmentStatistics> cumulativeHourMap;
 
 	Queue<SpeedSample> sampleQueue = new ConcurrentLinkedQueue<SpeedSample>();
@@ -47,6 +47,7 @@ public class StatsDataStore {
 
 	    db = dbm.make();
 
+		weekHourMap = db.getAll();
 
 		BTreeMapMaker cumulativeHourMaker = db.createTreeMap("cumulativeHourMap");
 		cumulativeHourMaker = cumulativeHourMaker.valueSerializer(new ClassLoaderSerializer());
@@ -90,15 +91,17 @@ public class StatsDataStore {
 
 	public Map<String,SegmentStatistics> getWeekMap(long week) {
 
-		if(!weekHourMap.containsKey(week)) {
-			BTreeMapMaker hourMaker = db.createTreeMap("week_" + week);
+		String key = "week_" + week;
+
+		if(!weekHourMap.containsKey(key)) {
+			BTreeMapMaker hourMaker = db.createTreeMap(key);
 			hourMaker = hourMaker.valueSerializer(new ClassLoaderSerializer());
 
 			Map<String,SegmentStatistics> weekMap = hourMaker.makeOrGet();
-			weekHourMap.put(week, weekMap);
+			weekHourMap.put(key, weekMap);
 		}
 
-		return weekHourMap.get(week);
+		return (Map<String,SegmentStatistics>)weekHourMap.get(key);
 	}
 
 	public void addSpeedSample(SpeedSample speedSample) {
