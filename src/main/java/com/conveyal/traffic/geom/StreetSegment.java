@@ -30,6 +30,8 @@ public class StreetSegment extends SpatialDataItem {
 	final public long wayId;
 	final public double length;
 	final public boolean oneway;
+
+	final public String segmentTileId;
 	
 	final public int streetType;
 	
@@ -43,7 +45,10 @@ public class StreetSegment extends SpatialDataItem {
 		this.endNodeId = endNodeId;
 		
 		this.geometry = geometry;
-		
+		;
+
+		this.segmentTileId = "11_" + OSMDataStore.getTileX(this.geometry.getCoordinate().Y, this.geometry.getCoordinate().X, 11) + "_" + OSMDataStore.getTileY(this.geometry.getCoordinate().Y, this.geometry.getCoordinate().X, 11);
+
 		this.length = length;
 		// create composite segmentId
 		this.id = this.toString();

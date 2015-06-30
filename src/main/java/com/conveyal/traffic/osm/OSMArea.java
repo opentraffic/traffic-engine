@@ -9,8 +9,11 @@ import com.vividsolutions.jts.geom.GeometryFactory;
  */
 public class OSMArea extends SpatialDataItem {
 
-    public OSMArea(String osmId, Envelope env) {
+    public long zoneOffset;
+
+    public OSMArea(String osmId, long zoneOffset, Envelope env) {
         this.id = osmId;
+        this.zoneOffset = zoneOffset;
         GeometryFactory gf = new GeometryFactory();
         this.geometry = gf.toGeometry(env);
 

@@ -4,9 +4,10 @@
   <groupId>com.conveyal</groupId>
   <artifactId>traffic-engine</artifactId>
   <packaging>jar</packaging>
-  <version>0.1</version>
+  <version>0.1-SNAPSHOT</version>
   <name>traffic-engine</name>
   <build>
+
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -87,5 +88,10 @@
 		<artifactId>protobuf-java</artifactId>
 		<version>2.6.1</version>
 	</dependency>
+    <dependency>
+      <groupId>com.github.ben-manes.caffeine</groupId>
+      <artifactId>caffeine</artifactId>
+      <version>1.2.0</version>
+    </dependency>
   </dependencies>
 </project>

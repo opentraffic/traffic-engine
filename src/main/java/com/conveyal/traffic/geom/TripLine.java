@@ -12,14 +12,17 @@ import com.vividsolutions.jts.geom.Point;
 public class TripLine extends SpatialDataItem {
 
 	final public String segmentId;
+	final public int segmentType;
 	final public long wayId;
 	final public long startNodeId;
 	final public long endNodeId;
-	final public int triplineIndex; // the tripline along the way
-	
+	final public int tripLineIndex; // the tripline along the way
+
+	final public String segmentTileId;
+
 	final public double dist;
 
-	public TripLine(Point2D left, Point2D right, StreetSegment streetSegment, int triplineIndex, double dist) {
+	public TripLine(Point2D left, Point2D right, StreetSegment streetSegment, int tripLineIndex, double dist) {
 		
 		GeometryFactory gf = new GeometryFactory();
 
@@ -31,16 +34,18 @@ public class TripLine extends SpatialDataItem {
 		this.wayId = streetSegment.wayId;
 		this.startNodeId = streetSegment.startNodeId;
 		this.endNodeId = streetSegment.endNodeId;
-		this.triplineIndex = triplineIndex;
+		this.tripLineIndex = tripLineIndex;
 		this.dist = dist;
 		
 		this.segmentId = streetSegment.id;
+		this.segmentType = streetSegment.streetType;
+		this.segmentTileId = streetSegment.segmentTileId;
 		
 		this.id = this.toString();
 	}
 
 	public String toString() {
-		return "tl_" + wayId + ":" + startNodeId + "-" + endNodeId  + "-" + triplineIndex;
+		return "tl_" + wayId + ":" + startNodeId + "-" + endNodeId  + "-" + tripLineIndex;
 	}
 
 	public LineSegment getLineSegment() {
