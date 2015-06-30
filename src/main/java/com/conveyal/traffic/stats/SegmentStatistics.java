@@ -4,16 +4,13 @@ import com.conveyal.traffic.geom.StreetSegment;
 
 import javax.swing.event.DocumentEvent;
 import java.io.Serializable;
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
+import java.time.*;
 import java.time.temporal.ChronoField;
 import java.time.temporal.ChronoUnit;
 
 public class SegmentStatistics implements Serializable {
 
-	static long serialVersionUID = 100;
+	private static final long serialVersionUID = -5885621202679850261l;
 
 	public static int HOURS_IN_WEEK = 7 * 24;
 	public static long WEEK_OFFSET = 24 * 60 * 60 * 1000 * 4; // Jan 1, 1970 is a Thursday. Need to offset to Monday
@@ -43,6 +40,18 @@ public class SegmentStatistics implements Serializable {
 		}
 	}
 
+	public void avgStats(SegmentStatistics stats) {
+		this.sampleCount++;
+		this.sampleSum += stats.sampleSum / stats.sampleCount;
+
+		for(int i = 0; i < HOURS_IN_WEEK; i++) {
+			if(stats.hourSampleCount[i] > 0) {
+				hourSampleCount[i]++;
+				hourSampleSum[i] += stats.hourSampleSum[i] / stats.hourSampleCount[i];
+			}
+		}
+	}
+
 	public SummaryStatistics collectSummaryStatisics() {
 
 		synchronized (this) {
@@ -68,6 +77,11 @@ public class SegmentStatistics implements Serializable {
 
 	public static int getHourOfWeek(long time) {
 
+		// check and convert to millisecond
+		if(time < 15000000000l)
+			time = time * 1000;
+
+
 		Instant currentTime = Instant.ofEpochMilli(time);
 		ZonedDateTime zonedDateTime = ZonedDateTime.ofInstant(currentTime, ZoneId.of("UTC"));
 		int dayOfWeek = zonedDateTime.get(ChronoField.DAY_OF_WEEK) - 1;
@@ -79,27 +93,42 @@ public class SegmentStatistics implements Serializable {
 	// converts timestamp (ms) to the week bin beg
 	public static long getWeekSinceEpoch(long time) {
 
-		// check and convert to milliseconds
+		// check and convert to millisecond
 		if(time < 15000000000l)
 			time = time * 1000;
 
 		Instant epoch = Instant.ofEpochMilli(WEEK_OFFSET);
 		Instant currentTime = Instant.ofEpochMilli(time);
 
-		LocalDateTime startDate = LocalDateTime.ofInstant(epoch, ZoneId.systemDefault());
-		LocalDateTime endDate = LocalDateTime.ofInstant(currentTime, ZoneId.systemDefault());
+		LocalDateTime startDate = LocalDateTime.ofInstant(epoch, ZoneId.of("UTC"));
+		LocalDateTime endDate = LocalDateTime.ofInstant(currentTime, ZoneId.of("UTC"));
 
 		return ChronoUnit.WEEKS.between(startDate, endDate);
+	}
+
+	public static long getTimeForWeek(long week) {
+
+		Instant epoch = Instant.ofEpochMilli(WEEK_OFFSET);
+
+		LocalDateTime startDate = LocalDateTime.ofInstant(epoch, ZoneId.of("UTC"));
+		LocalDateTime offsetTime = startDate.plusWeeks(week);
+
+		return offsetTime.toEpochSecond(ZoneOffset.UTC) * 1000;
 	}
 
 	// converts timestamp (ms) to the week bin beg
 	public static long getHourSinceEpoch(long time) {
 
+		// check and convert to millisecond
+		if(time < 15000000000l)
+			time = time * 1000;
+
+
 		Instant epoch = Instant.ofEpochMilli(WEEK_OFFSET);
 		Instant currentTime = Instant.ofEpochMilli(time);
 
-		LocalDateTime startDate = LocalDateTime.ofInstant(epoch, ZoneId.systemDefault());
-		LocalDateTime endDate = LocalDateTime.ofInstant(currentTime, ZoneId.systemDefault());
+		LocalDateTime startDate = LocalDateTime.ofInstant(epoch, ZoneId.of("UTC"));
+		LocalDateTime endDate = LocalDateTime.ofInstant(currentTime, ZoneId.of("UTC"));
 
 		return ChronoUnit.HOURS.between(startDate, endDate);
 	}

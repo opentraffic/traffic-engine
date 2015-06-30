@@ -763,42 +763,25 @@ public final class ExchangeFormat {
     long getVehicleId();
 
     /**
-     * <code>optional int64 sourceId = 2;</code>
-     *
-     * <pre>
-     * optional ID for data source (registered with opentraffic.io)
-     * </pre>
-     */
-    boolean hasSourceId();
-    /**
-     * <code>optional int64 sourceId = 2;</code>
-     *
-     * <pre>
-     * optional ID for data source (registered with opentraffic.io)
-     * </pre>
-     */
-    long getSourceId();
-
-    /**
-     * <code>repeated .VehicleLocation locations = 3;</code>
+     * <code>repeated .VehicleLocation locations = 2;</code>
      */
     java.util.List<ExchangeFormat.VehicleLocation> 
         getLocationsList();
     /**
-     * <code>repeated .VehicleLocation locations = 3;</code>
+     * <code>repeated .VehicleLocation locations = 2;</code>
      */
     ExchangeFormat.VehicleLocation getLocations(int index);
     /**
-     * <code>repeated .VehicleLocation locations = 3;</code>
+     * <code>repeated .VehicleLocation locations = 2;</code>
      */
     int getLocationsCount();
     /**
-     * <code>repeated .VehicleLocation locations = 3;</code>
+     * <code>repeated .VehicleLocation locations = 2;</code>
      */
     java.util.List<? extends ExchangeFormat.VehicleLocationOrBuilder> 
         getLocationsOrBuilderList();
     /**
-     * <code>repeated .VehicleLocation locations = 3;</code>
+     * <code>repeated .VehicleLocation locations = 2;</code>
      */
     ExchangeFormat.VehicleLocationOrBuilder getLocationsOrBuilder(
         int index);
@@ -860,15 +843,10 @@ public final class ExchangeFormat {
               vehicleId_ = input.readInt64();
               break;
             }
-            case 16: {
-              bitField0_ |= 0x00000002;
-              sourceId_ = input.readInt64();
-              break;
-            }
-            case 26: {
-              if (!((mutable_bitField0_ & 0x00000004) == 0x00000004)) {
+            case 18: {
+              if (!((mutable_bitField0_ & 0x00000002) == 0x00000002)) {
                 locations_ = new java.util.ArrayList<ExchangeFormat.VehicleLocation>();
-                mutable_bitField0_ |= 0x00000004;
+                mutable_bitField0_ |= 0x00000002;
               }
               locations_.add(input.readMessage(ExchangeFormat.VehicleLocation.PARSER, extensionRegistry));
               break;
@@ -881,7 +859,7 @@ public final class ExchangeFormat {
         throw new com.google.protobuf.InvalidProtocolBufferException(
             e.getMessage()).setUnfinishedMessage(this);
       } finally {
-        if (((mutable_bitField0_ & 0x00000004) == 0x00000004)) {
+        if (((mutable_bitField0_ & 0x00000002) == 0x00000002)) {
           locations_ = java.util.Collections.unmodifiableList(locations_);
         }
         this.unknownFields = unknownFields.build();
@@ -939,58 +917,35 @@ public final class ExchangeFormat {
       return vehicleId_;
     }
 
-    public static final int SOURCEID_FIELD_NUMBER = 2;
-    private long sourceId_;
-    /**
-     * <code>optional int64 sourceId = 2;</code>
-     *
-     * <pre>
-     * optional ID for data source (registered with opentraffic.io)
-     * </pre>
-     */
-    public boolean hasSourceId() {
-      return ((bitField0_ & 0x00000002) == 0x00000002);
-    }
-    /**
-     * <code>optional int64 sourceId = 2;</code>
-     *
-     * <pre>
-     * optional ID for data source (registered with opentraffic.io)
-     * </pre>
-     */
-    public long getSourceId() {
-      return sourceId_;
-    }
-
-    public static final int LOCATIONS_FIELD_NUMBER = 3;
+    public static final int LOCATIONS_FIELD_NUMBER = 2;
     private java.util.List<ExchangeFormat.VehicleLocation> locations_;
     /**
-     * <code>repeated .VehicleLocation locations = 3;</code>
+     * <code>repeated .VehicleLocation locations = 2;</code>
      */
     public java.util.List<ExchangeFormat.VehicleLocation> getLocationsList() {
       return locations_;
     }
     /**
-     * <code>repeated .VehicleLocation locations = 3;</code>
+     * <code>repeated .VehicleLocation locations = 2;</code>
      */
     public java.util.List<? extends ExchangeFormat.VehicleLocationOrBuilder> 
         getLocationsOrBuilderList() {
       return locations_;
     }
     /**
-     * <code>repeated .VehicleLocation locations = 3;</code>
+     * <code>repeated .VehicleLocation locations = 2;</code>
      */
     public int getLocationsCount() {
       return locations_.size();
     }
     /**
-     * <code>repeated .VehicleLocation locations = 3;</code>
+     * <code>repeated .VehicleLocation locations = 2;</code>
      */
     public ExchangeFormat.VehicleLocation getLocations(int index) {
       return locations_.get(index);
     }
     /**
-     * <code>repeated .VehicleLocation locations = 3;</code>
+     * <code>repeated .VehicleLocation locations = 2;</code>
      */
     public ExchangeFormat.VehicleLocationOrBuilder getLocationsOrBuilder(
         int index) {
@@ -999,7 +954,6 @@ public final class ExchangeFormat {
 
     private void initFields() {
       vehicleId_ = 0L;
-      sourceId_ = 0L;
       locations_ = java.util.Collections.emptyList();
     }
     private byte memoizedIsInitialized = -1;
@@ -1028,11 +982,8 @@ public final class ExchangeFormat {
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         output.writeInt64(1, vehicleId_);
       }
-      if (((bitField0_ & 0x00000002) == 0x00000002)) {
-        output.writeInt64(2, sourceId_);
-      }
       for (int i = 0; i < locations_.size(); i++) {
-        output.writeMessage(3, locations_.get(i));
+        output.writeMessage(2, locations_.get(i));
       }
       getUnknownFields().writeTo(output);
     }
@@ -1047,13 +998,9 @@ public final class ExchangeFormat {
         size += com.google.protobuf.CodedOutputStream
           .computeInt64Size(1, vehicleId_);
       }
-      if (((bitField0_ & 0x00000002) == 0x00000002)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeInt64Size(2, sourceId_);
-      }
       for (int i = 0; i < locations_.size(); i++) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(3, locations_.get(i));
+          .computeMessageSize(2, locations_.get(i));
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -1175,11 +1122,9 @@ public final class ExchangeFormat {
         super.clear();
         vehicleId_ = 0L;
         bitField0_ = (bitField0_ & ~0x00000001);
-        sourceId_ = 0L;
-        bitField0_ = (bitField0_ & ~0x00000002);
         if (locationsBuilder_ == null) {
           locations_ = java.util.Collections.emptyList();
-          bitField0_ = (bitField0_ & ~0x00000004);
+          bitField0_ = (bitField0_ & ~0x00000002);
         } else {
           locationsBuilder_.clear();
         }
@@ -1215,14 +1160,10 @@ public final class ExchangeFormat {
           to_bitField0_ |= 0x00000001;
         }
         result.vehicleId_ = vehicleId_;
-        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
-          to_bitField0_ |= 0x00000002;
-        }
-        result.sourceId_ = sourceId_;
         if (locationsBuilder_ == null) {
-          if (((bitField0_ & 0x00000004) == 0x00000004)) {
+          if (((bitField0_ & 0x00000002) == 0x00000002)) {
             locations_ = java.util.Collections.unmodifiableList(locations_);
-            bitField0_ = (bitField0_ & ~0x00000004);
+            bitField0_ = (bitField0_ & ~0x00000002);
           }
           result.locations_ = locations_;
         } else {
@@ -1247,14 +1188,11 @@ public final class ExchangeFormat {
         if (other.hasVehicleId()) {
           setVehicleId(other.getVehicleId());
         }
-        if (other.hasSourceId()) {
-          setSourceId(other.getSourceId());
-        }
         if (locationsBuilder_ == null) {
           if (!other.locations_.isEmpty()) {
             if (locations_.isEmpty()) {
               locations_ = other.locations_;
-              bitField0_ = (bitField0_ & ~0x00000004);
+              bitField0_ = (bitField0_ & ~0x00000002);
             } else {
               ensureLocationsIsMutable();
               locations_.addAll(other.locations_);
@@ -1267,7 +1205,7 @@ public final class ExchangeFormat {
               locationsBuilder_.dispose();
               locationsBuilder_ = null;
               locations_ = other.locations_;
-              bitField0_ = (bitField0_ & ~0x00000004);
+              bitField0_ = (bitField0_ & ~0x00000002);
               locationsBuilder_ = 
                 com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                    getLocationsFieldBuilder() : null;
@@ -1361,60 +1299,12 @@ public final class ExchangeFormat {
         return this;
       }
 
-      private long sourceId_ ;
-      /**
-       * <code>optional int64 sourceId = 2;</code>
-       *
-       * <pre>
-       * optional ID for data source (registered with opentraffic.io)
-       * </pre>
-       */
-      public boolean hasSourceId() {
-        return ((bitField0_ & 0x00000002) == 0x00000002);
-      }
-      /**
-       * <code>optional int64 sourceId = 2;</code>
-       *
-       * <pre>
-       * optional ID for data source (registered with opentraffic.io)
-       * </pre>
-       */
-      public long getSourceId() {
-        return sourceId_;
-      }
-      /**
-       * <code>optional int64 sourceId = 2;</code>
-       *
-       * <pre>
-       * optional ID for data source (registered with opentraffic.io)
-       * </pre>
-       */
-      public Builder setSourceId(long value) {
-        bitField0_ |= 0x00000002;
-        sourceId_ = value;
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>optional int64 sourceId = 2;</code>
-       *
-       * <pre>
-       * optional ID for data source (registered with opentraffic.io)
-       * </pre>
-       */
-      public Builder clearSourceId() {
-        bitField0_ = (bitField0_ & ~0x00000002);
-        sourceId_ = 0L;
-        onChanged();
-        return this;
-      }
-
       private java.util.List<ExchangeFormat.VehicleLocation> locations_ =
         java.util.Collections.emptyList();
       private void ensureLocationsIsMutable() {
-        if (!((bitField0_ & 0x00000004) == 0x00000004)) {
+        if (!((bitField0_ & 0x00000002) == 0x00000002)) {
           locations_ = new java.util.ArrayList<ExchangeFormat.VehicleLocation>(locations_);
-          bitField0_ |= 0x00000004;
+          bitField0_ |= 0x00000002;
          }
       }
 
@@ -1422,7 +1312,7 @@ public final class ExchangeFormat {
           ExchangeFormat.VehicleLocation, ExchangeFormat.VehicleLocation.Builder, ExchangeFormat.VehicleLocationOrBuilder> locationsBuilder_;
 
       /**
-       * <code>repeated .VehicleLocation locations = 3;</code>
+       * <code>repeated .VehicleLocation locations = 2;</code>
        */
       public java.util.List<ExchangeFormat.VehicleLocation> getLocationsList() {
         if (locationsBuilder_ == null) {
@@ -1432,7 +1322,7 @@ public final class ExchangeFormat {
         }
       }
       /**
-       * <code>repeated .VehicleLocation locations = 3;</code>
+       * <code>repeated .VehicleLocation locations = 2;</code>
        */
       public int getLocationsCount() {
         if (locationsBuilder_ == null) {
@@ -1442,7 +1332,7 @@ public final class ExchangeFormat {
         }
       }
       /**
-       * <code>repeated .VehicleLocation locations = 3;</code>
+       * <code>repeated .VehicleLocation locations = 2;</code>
        */
       public ExchangeFormat.VehicleLocation getLocations(int index) {
         if (locationsBuilder_ == null) {
@@ -1452,7 +1342,7 @@ public final class ExchangeFormat {
         }
       }
       /**
-       * <code>repeated .VehicleLocation locations = 3;</code>
+       * <code>repeated .VehicleLocation locations = 2;</code>
        */
       public Builder setLocations(
           int index, ExchangeFormat.VehicleLocation value) {
@@ -1469,7 +1359,7 @@ public final class ExchangeFormat {
         return this;
       }
       /**
-       * <code>repeated .VehicleLocation locations = 3;</code>
+       * <code>repeated .VehicleLocation locations = 2;</code>
        */
       public Builder setLocations(
           int index, ExchangeFormat.VehicleLocation.Builder builderForValue) {
@@ -1483,7 +1373,7 @@ public final class ExchangeFormat {
         return this;
       }
       /**
-       * <code>repeated .VehicleLocation locations = 3;</code>
+       * <code>repeated .VehicleLocation locations = 2;</code>
        */
       public Builder addLocations(ExchangeFormat.VehicleLocation value) {
         if (locationsBuilder_ == null) {
@@ -1499,7 +1389,7 @@ public final class ExchangeFormat {
         return this;
       }
       /**
-       * <code>repeated .VehicleLocation locations = 3;</code>
+       * <code>repeated .VehicleLocation locations = 2;</code>
        */
       public Builder addLocations(
           int index, ExchangeFormat.VehicleLocation value) {
@@ -1516,7 +1406,7 @@ public final class ExchangeFormat {
         return this;
       }
       /**
-       * <code>repeated .VehicleLocation locations = 3;</code>
+       * <code>repeated .VehicleLocation locations = 2;</code>
        */
       public Builder addLocations(
           ExchangeFormat.VehicleLocation.Builder builderForValue) {
@@ -1530,7 +1420,7 @@ public final class ExchangeFormat {
         return this;
       }
       /**
-       * <code>repeated .VehicleLocation locations = 3;</code>
+       * <code>repeated .VehicleLocation locations = 2;</code>
        */
       public Builder addLocations(
           int index, ExchangeFormat.VehicleLocation.Builder builderForValue) {
@@ -1544,7 +1434,7 @@ public final class ExchangeFormat {
         return this;
       }
       /**
-       * <code>repeated .VehicleLocation locations = 3;</code>
+       * <code>repeated .VehicleLocation locations = 2;</code>
        */
       public Builder addAllLocations(
           java.lang.Iterable<? extends ExchangeFormat.VehicleLocation> values) {
@@ -1559,12 +1449,12 @@ public final class ExchangeFormat {
         return this;
       }
       /**
-       * <code>repeated .VehicleLocation locations = 3;</code>
+       * <code>repeated .VehicleLocation locations = 2;</code>
        */
       public Builder clearLocations() {
         if (locationsBuilder_ == null) {
           locations_ = java.util.Collections.emptyList();
-          bitField0_ = (bitField0_ & ~0x00000004);
+          bitField0_ = (bitField0_ & ~0x00000002);
           onChanged();
         } else {
           locationsBuilder_.clear();
@@ -1572,7 +1462,7 @@ public final class ExchangeFormat {
         return this;
       }
       /**
-       * <code>repeated .VehicleLocation locations = 3;</code>
+       * <code>repeated .VehicleLocation locations = 2;</code>
        */
       public Builder removeLocations(int index) {
         if (locationsBuilder_ == null) {
@@ -1585,14 +1475,14 @@ public final class ExchangeFormat {
         return this;
       }
       /**
-       * <code>repeated .VehicleLocation locations = 3;</code>
+       * <code>repeated .VehicleLocation locations = 2;</code>
        */
       public ExchangeFormat.VehicleLocation.Builder getLocationsBuilder(
           int index) {
         return getLocationsFieldBuilder().getBuilder(index);
       }
       /**
-       * <code>repeated .VehicleLocation locations = 3;</code>
+       * <code>repeated .VehicleLocation locations = 2;</code>
        */
       public ExchangeFormat.VehicleLocationOrBuilder getLocationsOrBuilder(
           int index) {
@@ -1602,7 +1492,7 @@ public final class ExchangeFormat {
         }
       }
       /**
-       * <code>repeated .VehicleLocation locations = 3;</code>
+       * <code>repeated .VehicleLocation locations = 2;</code>
        */
       public java.util.List<? extends ExchangeFormat.VehicleLocationOrBuilder> 
            getLocationsOrBuilderList() {
@@ -1613,14 +1503,14 @@ public final class ExchangeFormat {
         }
       }
       /**
-       * <code>repeated .VehicleLocation locations = 3;</code>
+       * <code>repeated .VehicleLocation locations = 2;</code>
        */
       public ExchangeFormat.VehicleLocation.Builder addLocationsBuilder() {
         return getLocationsFieldBuilder().addBuilder(
             ExchangeFormat.VehicleLocation.getDefaultInstance());
       }
       /**
-       * <code>repeated .VehicleLocation locations = 3;</code>
+       * <code>repeated .VehicleLocation locations = 2;</code>
        */
       public ExchangeFormat.VehicleLocation.Builder addLocationsBuilder(
           int index) {
@@ -1628,7 +1518,7 @@ public final class ExchangeFormat {
             index, ExchangeFormat.VehicleLocation.getDefaultInstance());
       }
       /**
-       * <code>repeated .VehicleLocation locations = 3;</code>
+       * <code>repeated .VehicleLocation locations = 2;</code>
        */
       public java.util.List<ExchangeFormat.VehicleLocation.Builder> 
            getLocationsBuilderList() {
@@ -1641,7 +1531,7 @@ public final class ExchangeFormat {
           locationsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
               ExchangeFormat.VehicleLocation, ExchangeFormat.VehicleLocation.Builder, ExchangeFormat.VehicleLocationOrBuilder>(
                   locations_,
-                  ((bitField0_ & 0x00000004) == 0x00000004),
+                  ((bitField0_ & 0x00000002) == 0x00000002),
                   getParentForChildren(),
                   isClean());
           locations_ = null;
@@ -1658,6 +1548,807 @@ public final class ExchangeFormat {
     }
 
     // @@protoc_insertion_point(class_scope:VehicleMessage)
+  }
+
+  public interface VehicleMessageEnvelopeOrBuilder extends
+      // @@protoc_insertion_point(interface_extends:VehicleMessageEnvelope)
+      com.google.protobuf.MessageOrBuilder {
+
+    /**
+     * <code>optional int64 sourceId = 1;</code>
+     *
+     * <pre>
+     * optional ID for data source (registered with opentraffic.io)
+     * </pre>
+     */
+    boolean hasSourceId();
+    /**
+     * <code>optional int64 sourceId = 1;</code>
+     *
+     * <pre>
+     * optional ID for data source (registered with opentraffic.io)
+     * </pre>
+     */
+    long getSourceId();
+
+    /**
+     * <code>repeated .VehicleMessage messages = 2;</code>
+     */
+    java.util.List<ExchangeFormat.VehicleMessage> 
+        getMessagesList();
+    /**
+     * <code>repeated .VehicleMessage messages = 2;</code>
+     */
+    ExchangeFormat.VehicleMessage getMessages(int index);
+    /**
+     * <code>repeated .VehicleMessage messages = 2;</code>
+     */
+    int getMessagesCount();
+    /**
+     * <code>repeated .VehicleMessage messages = 2;</code>
+     */
+    java.util.List<? extends ExchangeFormat.VehicleMessageOrBuilder> 
+        getMessagesOrBuilderList();
+    /**
+     * <code>repeated .VehicleMessage messages = 2;</code>
+     */
+    ExchangeFormat.VehicleMessageOrBuilder getMessagesOrBuilder(
+        int index);
+  }
+  /**
+   * Protobuf type {@code VehicleMessageEnvelope}
+   */
+  public static final class VehicleMessageEnvelope extends
+      com.google.protobuf.GeneratedMessage implements
+      // @@protoc_insertion_point(message_implements:VehicleMessageEnvelope)
+      VehicleMessageEnvelopeOrBuilder {
+    // Use VehicleMessageEnvelope.newBuilder() to construct.
+    private VehicleMessageEnvelope(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      super(builder);
+      this.unknownFields = builder.getUnknownFields();
+    }
+    private VehicleMessageEnvelope(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
+    private static final VehicleMessageEnvelope defaultInstance;
+    public static VehicleMessageEnvelope getDefaultInstance() {
+      return defaultInstance;
+    }
+
+    public VehicleMessageEnvelope getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private VehicleMessageEnvelope(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 8: {
+              bitField0_ |= 0x00000001;
+              sourceId_ = input.readInt64();
+              break;
+            }
+            case 18: {
+              if (!((mutable_bitField0_ & 0x00000002) == 0x00000002)) {
+                messages_ = new java.util.ArrayList<ExchangeFormat.VehicleMessage>();
+                mutable_bitField0_ |= 0x00000002;
+              }
+              messages_.add(input.readMessage(ExchangeFormat.VehicleMessage.PARSER, extensionRegistry));
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        if (((mutable_bitField0_ & 0x00000002) == 0x00000002)) {
+          messages_ = java.util.Collections.unmodifiableList(messages_);
+        }
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return ExchangeFormat.internal_static_VehicleMessageEnvelope_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return ExchangeFormat.internal_static_VehicleMessageEnvelope_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              ExchangeFormat.VehicleMessageEnvelope.class, ExchangeFormat.VehicleMessageEnvelope.Builder.class);
+    }
+
+    public static com.google.protobuf.Parser<VehicleMessageEnvelope> PARSER =
+        new com.google.protobuf.AbstractParser<VehicleMessageEnvelope>() {
+      public VehicleMessageEnvelope parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new VehicleMessageEnvelope(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<VehicleMessageEnvelope> getParserForType() {
+      return PARSER;
+    }
+
+    private int bitField0_;
+    public static final int SOURCEID_FIELD_NUMBER = 1;
+    private long sourceId_;
+    /**
+     * <code>optional int64 sourceId = 1;</code>
+     *
+     * <pre>
+     * optional ID for data source (registered with opentraffic.io)
+     * </pre>
+     */
+    public boolean hasSourceId() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <code>optional int64 sourceId = 1;</code>
+     *
+     * <pre>
+     * optional ID for data source (registered with opentraffic.io)
+     * </pre>
+     */
+    public long getSourceId() {
+      return sourceId_;
+    }
+
+    public static final int MESSAGES_FIELD_NUMBER = 2;
+    private java.util.List<ExchangeFormat.VehicleMessage> messages_;
+    /**
+     * <code>repeated .VehicleMessage messages = 2;</code>
+     */
+    public java.util.List<ExchangeFormat.VehicleMessage> getMessagesList() {
+      return messages_;
+    }
+    /**
+     * <code>repeated .VehicleMessage messages = 2;</code>
+     */
+    public java.util.List<? extends ExchangeFormat.VehicleMessageOrBuilder> 
+        getMessagesOrBuilderList() {
+      return messages_;
+    }
+    /**
+     * <code>repeated .VehicleMessage messages = 2;</code>
+     */
+    public int getMessagesCount() {
+      return messages_.size();
+    }
+    /**
+     * <code>repeated .VehicleMessage messages = 2;</code>
+     */
+    public ExchangeFormat.VehicleMessage getMessages(int index) {
+      return messages_.get(index);
+    }
+    /**
+     * <code>repeated .VehicleMessage messages = 2;</code>
+     */
+    public ExchangeFormat.VehicleMessageOrBuilder getMessagesOrBuilder(
+        int index) {
+      return messages_.get(index);
+    }
+
+    private void initFields() {
+      sourceId_ = 0L;
+      messages_ = java.util.Collections.emptyList();
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized == 1) return true;
+      if (isInitialized == 0) return false;
+
+      for (int i = 0; i < getMessagesCount(); i++) {
+        if (!getMessages(i).isInitialized()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+      }
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeInt64(1, sourceId_);
+      }
+      for (int i = 0; i < messages_.size(); i++) {
+        output.writeMessage(2, messages_.get(i));
+      }
+      getUnknownFields().writeTo(output);
+    }
+
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt64Size(1, sourceId_);
+      }
+      for (int i = 0; i < messages_.size(); i++) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(2, messages_.get(i));
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+
+    public static ExchangeFormat.VehicleMessageEnvelope parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static ExchangeFormat.VehicleMessageEnvelope parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static ExchangeFormat.VehicleMessageEnvelope parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static ExchangeFormat.VehicleMessageEnvelope parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static ExchangeFormat.VehicleMessageEnvelope parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static ExchangeFormat.VehicleMessageEnvelope parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+    public static ExchangeFormat.VehicleMessageEnvelope parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input);
+    }
+    public static ExchangeFormat.VehicleMessageEnvelope parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+    }
+    public static ExchangeFormat.VehicleMessageEnvelope parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static ExchangeFormat.VehicleMessageEnvelope parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(ExchangeFormat.VehicleMessageEnvelope prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code VehicleMessageEnvelope}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder> implements
+        // @@protoc_insertion_point(builder_implements:VehicleMessageEnvelope)
+        ExchangeFormat.VehicleMessageEnvelopeOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return ExchangeFormat.internal_static_VehicleMessageEnvelope_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return ExchangeFormat.internal_static_VehicleMessageEnvelope_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                ExchangeFormat.VehicleMessageEnvelope.class, ExchangeFormat.VehicleMessageEnvelope.Builder.class);
+      }
+
+      // Construct using ExchangeFormat.VehicleMessageEnvelope.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+          getMessagesFieldBuilder();
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+
+      public Builder clear() {
+        super.clear();
+        sourceId_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00000001);
+        if (messagesBuilder_ == null) {
+          messages_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000002);
+        } else {
+          messagesBuilder_.clear();
+        }
+        return this;
+      }
+
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return ExchangeFormat.internal_static_VehicleMessageEnvelope_descriptor;
+      }
+
+      public ExchangeFormat.VehicleMessageEnvelope getDefaultInstanceForType() {
+        return ExchangeFormat.VehicleMessageEnvelope.getDefaultInstance();
+      }
+
+      public ExchangeFormat.VehicleMessageEnvelope build() {
+        ExchangeFormat.VehicleMessageEnvelope result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public ExchangeFormat.VehicleMessageEnvelope buildPartial() {
+        ExchangeFormat.VehicleMessageEnvelope result = new ExchangeFormat.VehicleMessageEnvelope(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.sourceId_ = sourceId_;
+        if (messagesBuilder_ == null) {
+          if (((bitField0_ & 0x00000002) == 0x00000002)) {
+            messages_ = java.util.Collections.unmodifiableList(messages_);
+            bitField0_ = (bitField0_ & ~0x00000002);
+          }
+          result.messages_ = messages_;
+        } else {
+          result.messages_ = messagesBuilder_.build();
+        }
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof ExchangeFormat.VehicleMessageEnvelope) {
+          return mergeFrom((ExchangeFormat.VehicleMessageEnvelope)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(ExchangeFormat.VehicleMessageEnvelope other) {
+        if (other == ExchangeFormat.VehicleMessageEnvelope.getDefaultInstance()) return this;
+        if (other.hasSourceId()) {
+          setSourceId(other.getSourceId());
+        }
+        if (messagesBuilder_ == null) {
+          if (!other.messages_.isEmpty()) {
+            if (messages_.isEmpty()) {
+              messages_ = other.messages_;
+              bitField0_ = (bitField0_ & ~0x00000002);
+            } else {
+              ensureMessagesIsMutable();
+              messages_.addAll(other.messages_);
+            }
+            onChanged();
+          }
+        } else {
+          if (!other.messages_.isEmpty()) {
+            if (messagesBuilder_.isEmpty()) {
+              messagesBuilder_.dispose();
+              messagesBuilder_ = null;
+              messages_ = other.messages_;
+              bitField0_ = (bitField0_ & ~0x00000002);
+              messagesBuilder_ = 
+                com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
+                   getMessagesFieldBuilder() : null;
+            } else {
+              messagesBuilder_.addAllMessages(other.messages_);
+            }
+          }
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        for (int i = 0; i < getMessagesCount(); i++) {
+          if (!getMessages(i).isInitialized()) {
+            
+            return false;
+          }
+        }
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        ExchangeFormat.VehicleMessageEnvelope parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (ExchangeFormat.VehicleMessageEnvelope) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      private long sourceId_ ;
+      /**
+       * <code>optional int64 sourceId = 1;</code>
+       *
+       * <pre>
+       * optional ID for data source (registered with opentraffic.io)
+       * </pre>
+       */
+      public boolean hasSourceId() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <code>optional int64 sourceId = 1;</code>
+       *
+       * <pre>
+       * optional ID for data source (registered with opentraffic.io)
+       * </pre>
+       */
+      public long getSourceId() {
+        return sourceId_;
+      }
+      /**
+       * <code>optional int64 sourceId = 1;</code>
+       *
+       * <pre>
+       * optional ID for data source (registered with opentraffic.io)
+       * </pre>
+       */
+      public Builder setSourceId(long value) {
+        bitField0_ |= 0x00000001;
+        sourceId_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional int64 sourceId = 1;</code>
+       *
+       * <pre>
+       * optional ID for data source (registered with opentraffic.io)
+       * </pre>
+       */
+      public Builder clearSourceId() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        sourceId_ = 0L;
+        onChanged();
+        return this;
+      }
+
+      private java.util.List<ExchangeFormat.VehicleMessage> messages_ =
+        java.util.Collections.emptyList();
+      private void ensureMessagesIsMutable() {
+        if (!((bitField0_ & 0x00000002) == 0x00000002)) {
+          messages_ = new java.util.ArrayList<ExchangeFormat.VehicleMessage>(messages_);
+          bitField0_ |= 0x00000002;
+         }
+      }
+
+      private com.google.protobuf.RepeatedFieldBuilder<
+          ExchangeFormat.VehicleMessage, ExchangeFormat.VehicleMessage.Builder, ExchangeFormat.VehicleMessageOrBuilder> messagesBuilder_;
+
+      /**
+       * <code>repeated .VehicleMessage messages = 2;</code>
+       */
+      public java.util.List<ExchangeFormat.VehicleMessage> getMessagesList() {
+        if (messagesBuilder_ == null) {
+          return java.util.Collections.unmodifiableList(messages_);
+        } else {
+          return messagesBuilder_.getMessageList();
+        }
+      }
+      /**
+       * <code>repeated .VehicleMessage messages = 2;</code>
+       */
+      public int getMessagesCount() {
+        if (messagesBuilder_ == null) {
+          return messages_.size();
+        } else {
+          return messagesBuilder_.getCount();
+        }
+      }
+      /**
+       * <code>repeated .VehicleMessage messages = 2;</code>
+       */
+      public ExchangeFormat.VehicleMessage getMessages(int index) {
+        if (messagesBuilder_ == null) {
+          return messages_.get(index);
+        } else {
+          return messagesBuilder_.getMessage(index);
+        }
+      }
+      /**
+       * <code>repeated .VehicleMessage messages = 2;</code>
+       */
+      public Builder setMessages(
+          int index, ExchangeFormat.VehicleMessage value) {
+        if (messagesBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureMessagesIsMutable();
+          messages_.set(index, value);
+          onChanged();
+        } else {
+          messagesBuilder_.setMessage(index, value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .VehicleMessage messages = 2;</code>
+       */
+      public Builder setMessages(
+          int index, ExchangeFormat.VehicleMessage.Builder builderForValue) {
+        if (messagesBuilder_ == null) {
+          ensureMessagesIsMutable();
+          messages_.set(index, builderForValue.build());
+          onChanged();
+        } else {
+          messagesBuilder_.setMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .VehicleMessage messages = 2;</code>
+       */
+      public Builder addMessages(ExchangeFormat.VehicleMessage value) {
+        if (messagesBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureMessagesIsMutable();
+          messages_.add(value);
+          onChanged();
+        } else {
+          messagesBuilder_.addMessage(value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .VehicleMessage messages = 2;</code>
+       */
+      public Builder addMessages(
+          int index, ExchangeFormat.VehicleMessage value) {
+        if (messagesBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureMessagesIsMutable();
+          messages_.add(index, value);
+          onChanged();
+        } else {
+          messagesBuilder_.addMessage(index, value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .VehicleMessage messages = 2;</code>
+       */
+      public Builder addMessages(
+          ExchangeFormat.VehicleMessage.Builder builderForValue) {
+        if (messagesBuilder_ == null) {
+          ensureMessagesIsMutable();
+          messages_.add(builderForValue.build());
+          onChanged();
+        } else {
+          messagesBuilder_.addMessage(builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .VehicleMessage messages = 2;</code>
+       */
+      public Builder addMessages(
+          int index, ExchangeFormat.VehicleMessage.Builder builderForValue) {
+        if (messagesBuilder_ == null) {
+          ensureMessagesIsMutable();
+          messages_.add(index, builderForValue.build());
+          onChanged();
+        } else {
+          messagesBuilder_.addMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .VehicleMessage messages = 2;</code>
+       */
+      public Builder addAllMessages(
+          java.lang.Iterable<? extends ExchangeFormat.VehicleMessage> values) {
+        if (messagesBuilder_ == null) {
+          ensureMessagesIsMutable();
+          com.google.protobuf.AbstractMessageLite.Builder.addAll(
+              values, messages_);
+          onChanged();
+        } else {
+          messagesBuilder_.addAllMessages(values);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .VehicleMessage messages = 2;</code>
+       */
+      public Builder clearMessages() {
+        if (messagesBuilder_ == null) {
+          messages_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000002);
+          onChanged();
+        } else {
+          messagesBuilder_.clear();
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .VehicleMessage messages = 2;</code>
+       */
+      public Builder removeMessages(int index) {
+        if (messagesBuilder_ == null) {
+          ensureMessagesIsMutable();
+          messages_.remove(index);
+          onChanged();
+        } else {
+          messagesBuilder_.remove(index);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .VehicleMessage messages = 2;</code>
+       */
+      public ExchangeFormat.VehicleMessage.Builder getMessagesBuilder(
+          int index) {
+        return getMessagesFieldBuilder().getBuilder(index);
+      }
+      /**
+       * <code>repeated .VehicleMessage messages = 2;</code>
+       */
+      public ExchangeFormat.VehicleMessageOrBuilder getMessagesOrBuilder(
+          int index) {
+        if (messagesBuilder_ == null) {
+          return messages_.get(index);  } else {
+          return messagesBuilder_.getMessageOrBuilder(index);
+        }
+      }
+      /**
+       * <code>repeated .VehicleMessage messages = 2;</code>
+       */
+      public java.util.List<? extends ExchangeFormat.VehicleMessageOrBuilder> 
+           getMessagesOrBuilderList() {
+        if (messagesBuilder_ != null) {
+          return messagesBuilder_.getMessageOrBuilderList();
+        } else {
+          return java.util.Collections.unmodifiableList(messages_);
+        }
+      }
+      /**
+       * <code>repeated .VehicleMessage messages = 2;</code>
+       */
+      public ExchangeFormat.VehicleMessage.Builder addMessagesBuilder() {
+        return getMessagesFieldBuilder().addBuilder(
+            ExchangeFormat.VehicleMessage.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .VehicleMessage messages = 2;</code>
+       */
+      public ExchangeFormat.VehicleMessage.Builder addMessagesBuilder(
+          int index) {
+        return getMessagesFieldBuilder().addBuilder(
+            index, ExchangeFormat.VehicleMessage.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .VehicleMessage messages = 2;</code>
+       */
+      public java.util.List<ExchangeFormat.VehicleMessage.Builder> 
+           getMessagesBuilderList() {
+        return getMessagesFieldBuilder().getBuilderList();
+      }
+      private com.google.protobuf.RepeatedFieldBuilder<
+          ExchangeFormat.VehicleMessage, ExchangeFormat.VehicleMessage.Builder, ExchangeFormat.VehicleMessageOrBuilder> 
+          getMessagesFieldBuilder() {
+        if (messagesBuilder_ == null) {
+          messagesBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
+              ExchangeFormat.VehicleMessage, ExchangeFormat.VehicleMessage.Builder, ExchangeFormat.VehicleMessageOrBuilder>(
+                  messages_,
+                  ((bitField0_ & 0x00000002) == 0x00000002),
+                  getParentForChildren(),
+                  isClean());
+          messages_ = null;
+        }
+        return messagesBuilder_;
+      }
+
+      // @@protoc_insertion_point(builder_scope:VehicleMessageEnvelope)
+    }
+
+    static {
+      defaultInstance = new VehicleMessageEnvelope(true);
+      defaultInstance.initFields();
+    }
+
+    // @@protoc_insertion_point(class_scope:VehicleMessageEnvelope)
   }
 
   public interface HeaderOrBuilder extends
@@ -9774,6 +10465,11 @@ public final class ExchangeFormat {
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_VehicleMessage_fieldAccessorTable;
   private static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_VehicleMessageEnvelope_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_VehicleMessageEnvelope_fieldAccessorTable;
+  private static final com.google.protobuf.Descriptors.Descriptor
     internal_static_Header_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
@@ -9820,35 +10516,37 @@ public final class ExchangeFormat {
       "\n\025exchange_format.proto\"^\n\017VehicleLocati" +
       "on\022\021\n\ttimestamp\030\001 \002(\003\022\013\n\003lat\030\002 \002(\001\022\013\n\003lo" +
       "n\030\003 \002(\001\022\017\n\007heading\030\004 \001(\005\022\r\n\005speed\030\005 \001(\002\"" +
-      "Z\n\016VehicleMessage\022\021\n\tvehicleId\030\001 \002(\003\022\020\n\010" +
-      "sourceId\030\002 \001(\003\022#\n\tlocations\030\003 \003(\0132\020.Vehi" +
-      "cleLocation\"e\n\006Header\022\023\n\013osmCommitId\030\001 \002" +
-      "(\003\022\031\n\021creationTimestamp\030\002 \002(\003\022\r\n\005tileX\030\003" +
-      " \002(\005\022\r\n\005tileY\030\004 \002(\005\022\r\n\005tileZ\030\005 \002(\005\"\236\001\n\021S" +
-      "egmentDefinition\022\r\n\005wayId\030\001 \002(\003\022\023\n\013start" +
-      "NodeId\030\002 \002(\003\022\021\n\tendNodeId\030\003 \002(\003\022\020\n\010start",
-      "Lat\030\004 \001(\001\022\020\n\010startLon\030\005 \001(\001\022\016\n\006endLat\030\006 " +
-      "\001(\001\022\016\n\006endLon\030\007 \001(\001\022\016\n\006length\030\010 \001(\005\"\204\001\n\021" +
-      "ODValidationPairs\022#\n\033currentWindowStartT" +
-      "imestamp\030\001 \002(\003\022\023\n\013startNodeId\030\002 \002(\003\022\021\n\te" +
-      "ndNodeId\030\003 \002(\003\022\016\n\006length\030\004 \002(\005\022\022\n\ntravel" +
-      "Time\030\005 \002(\005\"\324\001\n\rBaselineStats\022#\n\007segment\030" +
-      "\001 \002(\0132\022.SegmentDefinition\022\024\n\014averageSpee" +
-      "d\030\002 \002(\002\022\032\n\022hourOfWeekAverages\030\003 \003(\002\022\023\n\013t" +
-      "opQuartile\030\004 \001(\002\022\035\n\025hourOfWeekTopQuartil" +
-      "e\030\005 \003(\002\022\026\n\016bottomQuartile\030\006 \001(\002\022 \n\030hourO",
-      "fWeekBottomQuartile\030\007 \003(\002\"\323\001\n\014CurrentSta" +
-      "ts\022#\n\007segment\030\001 \002(\0132\022.SegmentDefinition\022" +
-      "#\n\033currentWindowStartTimestamp\030\002 \002(\003\022!\n\031" +
-      "currentWindowEndTimestamp\030\003 \002(\003\022\033\n\023curre" +
-      "ntAverageSpeed\030\004 \002(\002\022\032\n\022currentTopQuarti" +
-      "le\030\005 \001(\002\022\035\n\025currentBottomQuartile\030\006 \001(\002\"" +
-      "I\n\014BaselineTile\022\027\n\006header\030\001 \002(\0132\007.Header" +
-      "\022 \n\010segments\030\002 \003(\0132\016.BaselineStats\"\224\001\n\013C" +
-      "urrentTile\022\027\n\006header\030\001 \002(\0132\007.Header\022\036\n\026p" +
-      "ercentChangeThreshold\030\002 \002(\002\022\037\n\010segments\030",
-      "\003 \003(\0132\r.CurrentStats\022+\n\017validationParis\030" +
-      "\004 \003(\0132\022.ODValidationPairs"
+      "H\n\016VehicleMessage\022\021\n\tvehicleId\030\001 \002(\003\022#\n\t" +
+      "locations\030\002 \003(\0132\020.VehicleLocation\"M\n\026Veh" +
+      "icleMessageEnvelope\022\020\n\010sourceId\030\001 \001(\003\022!\n" +
+      "\010messages\030\002 \003(\0132\017.VehicleMessage\"e\n\006Head" +
+      "er\022\023\n\013osmCommitId\030\001 \002(\003\022\031\n\021creationTimes" +
+      "tamp\030\002 \002(\003\022\r\n\005tileX\030\003 \002(\005\022\r\n\005tileY\030\004 \002(\005" +
+      "\022\r\n\005tileZ\030\005 \002(\005\"\236\001\n\021SegmentDefinition\022\r\n",
+      "\005wayId\030\001 \002(\003\022\023\n\013startNodeId\030\002 \002(\003\022\021\n\tend" +
+      "NodeId\030\003 \002(\003\022\020\n\010startLat\030\004 \001(\001\022\020\n\010startL" +
+      "on\030\005 \001(\001\022\016\n\006endLat\030\006 \001(\001\022\016\n\006endLon\030\007 \001(\001" +
+      "\022\016\n\006length\030\010 \001(\005\"\204\001\n\021ODValidationPairs\022#" +
+      "\n\033currentWindowStartTimestamp\030\001 \002(\003\022\023\n\013s" +
+      "tartNodeId\030\002 \002(\003\022\021\n\tendNodeId\030\003 \002(\003\022\016\n\006l" +
+      "ength\030\004 \002(\005\022\022\n\ntravelTime\030\005 \002(\005\"\324\001\n\rBase" +
+      "lineStats\022#\n\007segment\030\001 \002(\0132\022.SegmentDefi" +
+      "nition\022\024\n\014averageSpeed\030\002 \002(\002\022\032\n\022hourOfWe" +
+      "ekAverages\030\003 \003(\002\022\023\n\013topQuartile\030\004 \001(\002\022\035\n",
+      "\025hourOfWeekTopQuartile\030\005 \003(\002\022\026\n\016bottomQu" +
+      "artile\030\006 \001(\002\022 \n\030hourOfWeekBottomQuartile" +
+      "\030\007 \003(\002\"\323\001\n\014CurrentStats\022#\n\007segment\030\001 \002(\013" +
+      "2\022.SegmentDefinition\022#\n\033currentWindowSta" +
+      "rtTimestamp\030\002 \002(\003\022!\n\031currentWindowEndTim" +
+      "estamp\030\003 \002(\003\022\033\n\023currentAverageSpeed\030\004 \002(" +
+      "\002\022\032\n\022currentTopQuartile\030\005 \001(\002\022\035\n\025current" +
+      "BottomQuartile\030\006 \001(\002\"I\n\014BaselineTile\022\027\n\006" +
+      "header\030\001 \002(\0132\007.Header\022 \n\010segments\030\002 \003(\0132" +
+      "\016.BaselineStats\"\224\001\n\013CurrentTile\022\027\n\006heade",
+      "r\030\001 \002(\0132\007.Header\022\036\n\026percentChangeThresho" +
+      "ld\030\002 \002(\002\022\037\n\010segments\030\003 \003(\0132\r.CurrentStat" +
+      "s\022+\n\017validationParis\030\004 \003(\0132\022.ODValidatio" +
+      "nPairs"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {
@@ -9873,45 +10571,51 @@ public final class ExchangeFormat {
     internal_static_VehicleMessage_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_VehicleMessage_descriptor,
-        new java.lang.String[] { "VehicleId", "SourceId", "Locations", });
-    internal_static_Header_descriptor =
+        new java.lang.String[] { "VehicleId", "Locations", });
+    internal_static_VehicleMessageEnvelope_descriptor =
       getDescriptor().getMessageTypes().get(2);
+    internal_static_VehicleMessageEnvelope_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_VehicleMessageEnvelope_descriptor,
+        new java.lang.String[] { "SourceId", "Messages", });
+    internal_static_Header_descriptor =
+      getDescriptor().getMessageTypes().get(3);
     internal_static_Header_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_Header_descriptor,
         new java.lang.String[] { "OsmCommitId", "CreationTimestamp", "TileX", "TileY", "TileZ", });
     internal_static_SegmentDefinition_descriptor =
-      getDescriptor().getMessageTypes().get(3);
+      getDescriptor().getMessageTypes().get(4);
     internal_static_SegmentDefinition_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_SegmentDefinition_descriptor,
         new java.lang.String[] { "WayId", "StartNodeId", "EndNodeId", "StartLat", "StartLon", "EndLat", "EndLon", "Length", });
     internal_static_ODValidationPairs_descriptor =
-      getDescriptor().getMessageTypes().get(4);
+      getDescriptor().getMessageTypes().get(5);
     internal_static_ODValidationPairs_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_ODValidationPairs_descriptor,
         new java.lang.String[] { "CurrentWindowStartTimestamp", "StartNodeId", "EndNodeId", "Length", "TravelTime", });
     internal_static_BaselineStats_descriptor =
-      getDescriptor().getMessageTypes().get(5);
+      getDescriptor().getMessageTypes().get(6);
     internal_static_BaselineStats_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_BaselineStats_descriptor,
         new java.lang.String[] { "Segment", "AverageSpeed", "HourOfWeekAverages", "TopQuartile", "HourOfWeekTopQuartile", "BottomQuartile", "HourOfWeekBottomQuartile", });
     internal_static_CurrentStats_descriptor =
-      getDescriptor().getMessageTypes().get(6);
+      getDescriptor().getMessageTypes().get(7);
     internal_static_CurrentStats_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_CurrentStats_descriptor,
         new java.lang.String[] { "Segment", "CurrentWindowStartTimestamp", "CurrentWindowEndTimestamp", "CurrentAverageSpeed", "CurrentTopQuartile", "CurrentBottomQuartile", });
     internal_static_BaselineTile_descriptor =
-      getDescriptor().getMessageTypes().get(7);
+      getDescriptor().getMessageTypes().get(8);
     internal_static_BaselineTile_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_BaselineTile_descriptor,
         new java.lang.String[] { "Header", "Segments", });
     internal_static_CurrentTile_descriptor =
-      getDescriptor().getMessageTypes().get(8);
+      getDescriptor().getMessageTypes().get(9);
     internal_static_CurrentTile_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_CurrentTile_descriptor,

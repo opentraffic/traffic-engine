@@ -121,7 +121,7 @@ public class VehicleState {
 			
 			Crossing lastCrossing = getLastCrossingAndUpdatePendingCrossings(gpsPoint.vehicleId, crossing);
 			
-			SpeedSample ss = getAdmissableSpeedSample(lastCrossing, crossing);
+			SpeedSample ss = getAdmissibleSpeedSample(lastCrossing, crossing);
 			if(ss==null){
 				continue;
 			}
@@ -158,10 +158,10 @@ public class VehicleState {
 	
 			@Override
 			public int compare(Crossing o1, Crossing o2) {
-				if( o1.timeMicros < o2.timeMicros ){
+				if( o1.time < o2.time ){
 					return -1;
 				}
-				if( o1.timeMicros > o2.timeMicros ){
+				if( o1.time > o2.time ){
 					return 1;
 				}
 				return 0;
@@ -171,21 +171,21 @@ public class VehicleState {
 		return ret;
 	}
 
-	private SpeedSample getAdmissableSpeedSample(Crossing lastCrossing, Crossing crossing) {
-		
+	private SpeedSample getAdmissibleSpeedSample(Crossing lastCrossing, Crossing crossing) {
+
 		if(lastCrossing == null){
 			return null;
 		}
 		
 		// don't record speeds for vehicles heading up the road in the wrong direction
-		if(crossing.tripline.triplineIndex < lastCrossing.tripline.triplineIndex){
+		if(crossing.tripline.tripLineIndex < lastCrossing.tripline.tripLineIndex){
 			return null;
 		}
 		
 		// it may be useful to keep the displacement sign, but the order of the
 		// ndIndex associated with each tripline gives the direction anyway
 		double ds = Math.abs(crossing.tripline.dist - lastCrossing.tripline.dist); // meters
-		double dt = crossing.getTime() - lastCrossing.getTime(); // seconds
+		double dt = (crossing.time - lastCrossing.time) / 1000; // seconds
 		
 		if( dt < 0 ){
 			throw new RuntimeException( String.format("this crossing happened before %fs before the last crossing", dt) );
@@ -201,7 +201,7 @@ public class VehicleState {
 			return null; // any speed sample above MAX_SPEED is assumed to be GPS junk.
 		}
 
-		SpeedSample ss = new SpeedSample(lastCrossing.getTime(), speed, lastCrossing.tripline.segmentId);
+		SpeedSample ss = new SpeedSample(lastCrossing.time, speed, lastCrossing.tripline.segmentId, lastCrossing.tripline.segmentTileId, lastCrossing.tripline.segmentType);
 
 		return ss;
 	}
@@ -231,7 +231,7 @@ public class VehicleState {
 		}
 		
 		// this crossing is now a pending crossing
-		if(crossing.tripline.triplineIndex == 1) {
+		if(crossing.tripline.tripLineIndex == 1) {
 			vehiclePendingCrossings.add(crossing);
 			pendingCrossings.put(vehicleId, vehiclePendingCrossings);
 		}

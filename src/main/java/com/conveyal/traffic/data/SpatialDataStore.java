@@ -11,13 +11,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import org.mapdb.BTreeKeySerializer;
-import org.mapdb.BTreeMap;
-import org.mapdb.DB;
+import org.mapdb.*;
 import org.mapdb.DB.BTreeMapMaker;
-import org.mapdb.DBMaker;
-import org.mapdb.Fun;
-import org.mapdb.Pump;
 import org.mapdb.Fun.Tuple2;
 
 import com.vividsolutions.jts.geom.Envelope;
@@ -57,10 +52,8 @@ public class SpatialDataStore {
 	    db = dbm.make();
 		
 	    BTreeMapMaker maker = db.createTreeMap(dataFile);
-	    
-	    // this probably ought to cache the serializer.
-	    //if (useJavaSerialization)
-	    maker = maker.valueSerializer(new ClassLoaderSerializer());
+
+	    maker = maker.valueSerializer(Serializer.JAVA);
 	    
 		map = maker.makeOrGet();
 		

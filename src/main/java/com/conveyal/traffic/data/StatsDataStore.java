@@ -1,22 +1,20 @@
 package com.conveyal.traffic.data;
 
 import com.conveyal.traffic.stats.SegmentStatistics;
-import com.conveyal.traffic.stats.SegmentTimeBins;
 import com.conveyal.traffic.stats.SpeedSample;
 import com.conveyal.traffic.stats.SummaryStatistics;
 import org.mapdb.DB;
 import org.mapdb.DB.BTreeMapMaker;
 import org.mapdb.DBMaker;
+import org.mapdb.Serializer;
 
 import java.io.File;
 import java.util.*;
-import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.logging.Logger;
-import java.util.logging.Level;
 
 public class StatsDataStore {
 
@@ -26,10 +24,13 @@ public class StatsDataStore {
 
 	ExecutorService executor;
 
-	Map<String, Object> weekHourMap = new ConcurrentHashMap<>();
+	Map<Long, Map<Integer,SegmentStatistics>> weekTypeMap = new ConcurrentHashMap<>();
+	Map<Integer,SegmentStatistics> cumulativeTypeMap;
+
+	Map<Long, Map<String,SegmentStatistics>> weekHourMap = new ConcurrentHashMap<>();
 	Map<String,SegmentStatistics> cumulativeHourMap;
 
-	Queue<SpeedSample> sampleQueue = new ConcurrentLinkedQueue<SpeedSample>();
+	Queue<SpeedSample> sampleQueue = new ConcurrentLinkedQueue<>();
 
 	/**
 	 * Create a new DataStore.
@@ -47,12 +48,26 @@ public class StatsDataStore {
 
 	    db = dbm.make();
 
-		weekHourMap = db.getAll();
+		Map<String, Object> maps =  db.getAll();
+		for(String mapId : maps.keySet()) {
+			if(mapId.startsWith("week_")) {
+				Long week = Long.parseLong(mapId.replace("week_", ""));
+				weekHourMap.put(week, (Map<String,SegmentStatistics>)maps.get(mapId));
+			}
+
+			if(mapId.startsWith("type_")) {
+				Long week = Long.parseLong(mapId.replace("type_", ""));
+				weekTypeMap.put(week, (Map<Integer, SegmentStatistics>) maps.get(mapId));
+			}
+		}
 
 		BTreeMapMaker cumulativeHourMaker = db.createTreeMap("cumulativeHourMap");
-		cumulativeHourMaker = cumulativeHourMaker.valueSerializer(new ClassLoaderSerializer());
-
+		cumulativeHourMaker = cumulativeHourMaker.valueSerializer(Serializer.JAVA);
 		cumulativeHourMap = cumulativeHourMaker.makeOrGet();
+
+		BTreeMapMaker cumulativeTypeMaker = db.createTreeMap("cumulativeTypeMap");
+		cumulativeTypeMaker = cumulativeTypeMaker.valueSerializer(Serializer.JAVA);
+		cumulativeTypeMap = cumulativeTypeMaker.makeOrGet();
 
 		executor = Executors.newFixedThreadPool(1);
 
@@ -74,14 +89,14 @@ public class StatsDataStore {
 						this.save(speedSample, false);
 						penedingCommit++;
 
-						if(penedingCommit > 1000) {
+						if(penedingCommit > 10000) {
 							commit();
 							penedingCommit = 0;
 						}
 					}
 				}
 				catch (Exception e) {
-					log.log(Level.SEVERE, e.toString());
+					e.printStackTrace();
 				}
 			}
 		};
@@ -93,28 +108,56 @@ public class StatsDataStore {
 
 		String key = "week_" + week;
 
-		if(!weekHourMap.containsKey(key)) {
+		if(!weekHourMap.containsKey(week)) {
 			BTreeMapMaker hourMaker = db.createTreeMap(key);
-			hourMaker = hourMaker.valueSerializer(new ClassLoaderSerializer());
+			hourMaker = hourMaker.valueSerializer(Serializer.JAVA);
 
 			Map<String,SegmentStatistics> weekMap = hourMaker.makeOrGet();
-			weekHourMap.put(key, weekMap);
+			weekHourMap.put(week, weekMap);
 		}
 
-		return (Map<String,SegmentStatistics>)weekHourMap.get(key);
+		return weekHourMap.get(week);
+	}
+
+	public Map<Integer,SegmentStatistics> getTypeMap(long week) {
+
+		String key = "type_" + week;
+
+		if(!cumulativeTypeMap.containsKey(week)) {
+			BTreeMapMaker hourMaker = db.createTreeMap(key);
+			hourMaker = hourMaker.valueSerializer(Serializer.JAVA);
+
+			Map<Integer,SegmentStatistics> weekMap = hourMaker.makeOrGet();
+			weekTypeMap.put(week, weekMap);
+		}
+
+		return weekTypeMap.get(week);
+	}
+
+	public List<Long> getWeekList() {
+		List<Long> list = new ArrayList();
+		list.addAll(weekHourMap.keySet());
+		return list;
 	}
 
 	public void addSpeedSample(SpeedSample speedSample) {
 		sampleQueue.add(speedSample);
 	}
 
-	public void save(long time, String segmentId, SegmentStatistics segmentStats) {
-		save(time, segmentId, segmentStats, true);
+	public void save(long time, String segmentId, int segmentType, SegmentStatistics segmentStats) {
+		save(time, segmentId, segmentType, segmentStats, true);
 	}
 
-	public void save(long time, String segmentId, SegmentStatistics segmentStats, boolean commit) {
+	public void save(long time, String segmentId, int segmentType, SegmentStatistics segmentStats, boolean commit) {
 
 		long week = SegmentStatistics.getWeekSinceEpoch(time);
+
+		Map<Integer,SegmentStatistics> typeData = getTypeMap(week);
+
+		if(typeData.containsKey(segmentType))
+			typeData.get(segmentType).addStats(segmentStats);
+		else
+			typeData.put(segmentType, segmentStats);
 
 		Map<String,SegmentStatistics> hourData = getWeekMap(week);
 
@@ -142,6 +185,16 @@ public class StatsDataStore {
 
 		long week = SegmentStatistics.getWeekSinceEpoch(speedSample.getTime());
 
+		Map<Integer,SegmentStatistics> typeData = getTypeMap(week);
+
+		if(typeData.containsKey(speedSample.getSegmentType()))
+			typeData.get(speedSample.getSegmentType()).addSample(speedSample);
+		else {
+			SegmentStatistics segmentStatistics = new SegmentStatistics();
+			segmentStatistics.addSample(speedSample);
+			typeData.put(speedSample.getSegmentType(), segmentStatistics);
+		}
+
 		Map<String,SegmentStatistics> hourData = getWeekMap(week);
 
 		if(hourData.containsKey(speedSample.getSegmentId()))
@@ -151,7 +204,6 @@ public class StatsDataStore {
 			segmentStatistics.addSample(speedSample);
 			hourData.put(speedSample.getSegmentId(), segmentStatistics);
 		}
-
 
 		SegmentStatistics segmentStatistics;
 		if(cumulativeHourMap.containsKey(speedSample.getSegmentId()))
@@ -167,13 +219,6 @@ public class StatsDataStore {
 			commit();
 	}
 
-	public void save(long time,  Map<String, SegmentStatistics> stats) {
-
-		for(Entry<String,SegmentStatistics> entry : stats.entrySet())
-			save(time, entry.getKey(), entry.getValue(), false);
-
-		commit();
-	}
 
 	public void commit() {
 		db.commit();
@@ -187,6 +232,10 @@ public class StatsDataStore {
 			summaryStatistics = cumulativeHourMap.get(segmentId).collectSummaryStatisics();
 
 		return summaryStatistics;
+	}
+
+	public SegmentStatistics getSegmentStatisics(String segmentId) {
+		return cumulativeHourMap.get(segmentId);
 	}
 
 	public Integer size() {

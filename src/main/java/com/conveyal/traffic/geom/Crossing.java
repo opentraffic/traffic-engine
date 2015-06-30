@@ -6,21 +6,18 @@ public class Crossing{
 
 	public GPSSegment gpsSegment;
 	public TripLine tripline;
-	public long timeMicros;
+	public long time;
 
 	public Crossing(GPSSegment gpsSegment, TripLine tl, long time) {
 		this.gpsSegment = gpsSegment;
 		this.tripline = tl;
-		this.timeMicros = time;
+		this.time = time;
 	}
 
 	public String toString() {
-		return "vehicle " + gpsSegment.p0.vehicleId + " crossed " + tripline + " at " + timeMicros;
+		return "vehicle " + gpsSegment.p0.vehicleId + " crossed " + tripline + " at " + time;
 	}
 
-	public long getTime() {
-		return timeMicros / 1000000;
-	}
 
 	public boolean completedBy(Crossing nextCrossing) {
 		
@@ -28,11 +25,11 @@ public class Crossing{
 			return false;
 		}
 
-		if(this.tripline.triplineIndex > nextCrossing.tripline.triplineIndex){
+		if(this.tripline.tripLineIndex > nextCrossing.tripline.tripLineIndex){
 			return false;
 		}
 		
-		if(Math.abs(this.tripline.triplineIndex - nextCrossing.tripline.triplineIndex) != 1) {
+		if(Math.abs(this.tripline.tripLineIndex - nextCrossing.tripline.tripLineIndex) != 1) {
 			return false;
 		}
 		
@@ -43,8 +40,5 @@ public class Crossing{
 		return this.tripline;
 	}
 
-	public long getTimeMicros() {
-		return this.timeMicros;
-	}
 
 }

@@ -15,7 +15,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import com.conveyal.traffic.TrafficEngine;
 import com.conveyal.traffic.data.StatsDataStore;
+import com.conveyal.traffic.stats.SegmentStatistics;
 import com.google.common.io.ByteStreams;
 import org.geotools.referencing.GeodeticCalculator;
 
@@ -88,10 +90,12 @@ public class OSMDataStore {
 
 		String osmId = z + "_" + x + "_" + y;
 
+		Envelope env = tile2Envelope(x, y, z);
+
 		if(!yPbfFile.exists()) {
 			xDir.mkdirs();
 
-			Envelope env = tile2Envelope(x, y, z);
+
 
 			Double south = env.getMinY() < env.getMaxY() ? env.getMinY() : env.getMaxY();
 			Double west = env.getMinX() < env.getMaxX() ? env.getMinX() : env.getMaxX();
@@ -128,7 +132,7 @@ public class OSMDataStore {
 				is.close();
 				os.close();
 
-				loadPbfFile(osmId, yPbfFile);
+				loadPbfFile(osmId, env, yPbfFile);
 
 
 			} catch (IOException e) {
@@ -137,11 +141,11 @@ public class OSMDataStore {
 			}
 		}
 		else
-			loadPbfFile(osmId, yPbfFile);
+			loadPbfFile(osmId, env, yPbfFile);
 
 	}
 
-	public void loadPbfFile(String osmId, File pbfFile) {
+	public void loadPbfFile(String osmId, Envelope env, File pbfFile) {
 
 		if(osmCoverage.contains(osmId))
 			return;
@@ -151,10 +155,9 @@ public class OSMDataStore {
 		// load pbf osm source and merge into traffic engine
 		OSM osm = new OSM(null);
 		osm.readFromFile(pbfFile.getAbsolutePath().toString());
-
 		try {
 			// add OSM an truncate geometries
-			OSMArea osmArea = addOsm(osmId, osm, false);
+			OSMArea osmArea = addOsm(osmId, env, osm, false);
 
 			osmCoverage.save(osmArea);
 		}
@@ -162,16 +165,24 @@ public class OSMDataStore {
 			e.printStackTrace();
 			log.log(Level.SEVERE, "Unable to load osm: " + pbfFile.getAbsolutePath());
 		}
-
-
+		finally {
+			osm.close();
+		}
 	}
 
 
-	public void checkOsm(double lat, double lon) {
+	public synchronized long checkOsm(double lat, double lon) {
 		Envelope env1 = new Envelope();
-		env1.expandToInclude(lat, lon);
-		if(osmCoverage.getByEnvelope(env1).size() == 0)
-			loadOSMTile(lat,lon, 11);
+		env1.expandToInclude(lon, lat);
+
+		List<SpatialDataItem> osmCoverageList = osmCoverage.getByEnvelope(env1);
+		if(osmCoverageList.size() == 0) {
+
+					loadOSMTile(lat,lon, 11);
+			osmCoverageList = osmCoverage.getByEnvelope(env1);
+		}
+		return ((OSMArea) osmCoverageList.get(0)).zoneOffset;
+
 	}
 
 	public void loadOSMTile(double lat, double lon, int z) {
@@ -181,12 +192,15 @@ public class OSMDataStore {
 		loadOSMTile(xtile, ytile, z);
 	}
 
-	public static String getTileNumber(final double lat, final double lon, final int zoom) {
+	public static int getTileX(final double lat, final double lon, final int zoom) {
 		int xtile = (int)Math.floor( (lon + 180) / 360 * (1<<zoom) ) ;
-		int ytile = (int)Math.floor( (1 - Math.log(Math.tan(Math.toRadians(lat)) + 1 / Math.cos(Math.toRadians(lat))) / Math.PI) / 2 * (1<<zoom) ) ;
-		return("" + zoom + "/" + xtile + "/" + ytile);
+		return xtile;
 	}
 
+	public static int getTileY(final double lat, final double lon, final int zoom) {
+		int ytile = (int)Math.floor( (1 - Math.log(Math.tan(Math.toRadians(lat)) + 1 / Math.cos(Math.toRadians(lat))) / Math.PI) / 2 * (1<<zoom) ) ;
+		return ytile;
+	}
 
 	public static double tile2lon(int x, int z) {
 		return x / Math.pow(2.0, z) * 360.0 - 180;
@@ -205,9 +219,7 @@ public class OSMDataStore {
 		return new Envelope(minLon, maxLon, minLat, maxLat);
 	}
 	
-	private OSMArea addOsm(String osmId, OSM osm, Boolean keepCompleteGeometries) {
-
-		Envelope env = new Envelope();
+	private OSMArea addOsm(String osmId, Envelope env, OSM osm, Boolean keepCompleteGeometries) {
 		
 		List<StreetSegment> segments = getStreetSegments(osm);
 		
@@ -234,8 +246,10 @@ public class OSMDataStore {
 		}
 		streetSegments.commit();
 		triplines.commit();
-		
-		return new OSMArea(osmId, env);
+
+		long zoneOffset = TrafficEngine.timeConverter.getOffsetForCoord(env.centre());
+
+		return new OSMArea(osmId, zoneOffset, env);
 	}
 	
 	public List<SpatialDataItem> getStreetSegments(Envelope env) {
@@ -456,6 +470,10 @@ public class OSMDataStore {
 
 	public SummaryStatistics collectSummaryStatisics(String segmentId) {
 		return statsDataStore.collectSummaryStatisics(segmentId);
+	}
+
+	public SegmentStatistics getSegmentStatisics(String segmentId) {
+		return statsDataStore.getSegmentStatisics(segmentId);
 	}
 	
 	public void collectStatistcs(FileOutputStream os, Envelope env) throws IOException {
