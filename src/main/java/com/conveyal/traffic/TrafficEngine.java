@@ -5,14 +5,16 @@ import java.io.FileOutputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.TimeZone;
+import java.util.stream.Collectors;
 
 import com.conveyal.traffic.data.SpatialDataItem;
-import com.conveyal.traffic.data.StatsDataStore;
 import com.conveyal.traffic.data.TimeConverter;
+import com.conveyal.traffic.data.Vehicle;
 import com.conveyal.traffic.geom.Crossing;
 import com.conveyal.traffic.geom.GPSPoint;
 import com.conveyal.traffic.geom.GPSSegment;
 import com.conveyal.traffic.geom.TripLine;
+import com.conveyal.traffic.osm.OSMArea;
 import com.conveyal.traffic.osm.OSMDataStore;
 import com.conveyal.traffic.stats.SegmentStatistics;
 import com.conveyal.traffic.stats.SummaryStatistics;
@@ -26,7 +28,7 @@ public class TrafficEngine {
 
 	OSMDataStore osmData;
 
-	VehicleState vehicleState;
+	VehicleCache vehicleState;
 
 	Envelope engineEnvelope = new Envelope();
 
@@ -36,7 +38,7 @@ public class TrafficEngine {
 		TimeZone.setDefault(TimeZone.getTimeZone("GMT"));
 
 		osmData = new OSMDataStore(dataPath, osmPath, osmServer);
-		vehicleState = new VehicleState(osmData, debug);
+		vehicleState = new VehicleCache(osmData, debug);
 	}
 
 	public TrafficEngine(File dataPath, File osmPath, String osmServer){
@@ -53,15 +55,19 @@ public class TrafficEngine {
 		return engineEnvelope;
 	}
 	
-	public int getVehicleCount() {
-		return vehicleState.lastUpdate.size();
+	public long getVehicleCount() {
+		return vehicleState.getVehicleCount();
+	}
+
+	public long getSampleQueueSize() {
+		return osmData.statsDataStore.getSampleQueueSize();
 	}
 	
 	public List<SpatialDataItem> getStreetSegments(Envelope env) {
 		return osmData.getStreetSegments(env);
 	}
 
-	public SpatialDataItem getStreetSegmentsById(String segementId) {
+	public SpatialDataItem getStreetSegmentsById(Long segementId) {
 		return osmData.getStreetSegmentById(segementId);
 	}
 
@@ -91,7 +97,7 @@ public class TrafficEngine {
 
 	}
 	
-	public SummaryStatistics collectSummaryStatisics(String segmentId){
+	public SummaryStatistics collectSummaryStatisics(Long segmentId){
 		return osmData.collectSummaryStatisics(segmentId);
 	}
 
@@ -99,7 +105,7 @@ public class TrafficEngine {
 		return osmData.statsDataStore.getWeekList();
 	}
 
-	public SegmentStatistics getSegmentStatistics(String segmentId){
+	public SegmentStatistics getSegmentStatistics(Long segmentId){
 		return osmData.getSegmentStatisics(segmentId);
 	}
 	
@@ -107,7 +113,7 @@ public class TrafficEngine {
 		
 		try {
 			FileOutputStream fileOut = new FileOutputStream(statsFile);
-			osmData.collectStatistcs(fileOut, env);
+			//osmData.collectStatistcs(fileOut, env);
 			
 			fileOut.close();
 			
@@ -132,17 +138,17 @@ public class TrafficEngine {
 
 	public List<Crossing> getDebugPendingCrossings() {
 		ArrayList<Crossing> crossings = new ArrayList<>();
-		for(Long key : this.vehicleState.pendingCrossings.keySet()) {
-			crossings.addAll(this.vehicleState.pendingCrossings.get(key));
+
+		for(Vehicle vehicle : this.vehicleState.vehicleCache.asMap().values()) {
+			if(vehicle.pendingCrossings != null)
+				crossings.addAll(vehicle.pendingCrossings);
 		}
+
 		return crossings;
 	}
 
 	public List<Envelope> getOsmEnvelopes() {
-		List<Envelope> envelopes = new ArrayList<>();
-		for(SpatialDataItem item : osmData.osmCoverage.getAll()) {
-			envelopes.add(item.geometry.getEnvelopeInternal());
-		}
+		List<Envelope> envelopes = osmData.osmIdMap.values().stream().map(areas -> areas.env).collect(Collectors.toList());
 		return envelopes;
 	}
 }

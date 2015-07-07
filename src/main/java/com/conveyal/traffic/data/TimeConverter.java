@@ -117,7 +117,7 @@ public class TimeConverter {
                 }
             }
 
-            for(String tzID : timeZoneEnvs.keySet()) {
+            for (String tzID : timeZoneEnvs.keySet()) {
                 timeZoneIndex.insert(timeZoneEnvs.get(tzID), tzID);
             }
 
@@ -126,6 +126,11 @@ public class TimeConverter {
         } catch (IOException e) {
             e.printStackTrace();
         }
+
+
+        // disable timezone converter
+        //timePolyIndex = new STRtree(100);
+        //timeZoneIndex = new STRtree(600);
 
         // init SRTree
         timePolyIndex.query(new Envelope(new Coordinate(1,1)));
@@ -170,12 +175,15 @@ public class TimeConverter {
             return unconvertedTime + tz.getRawOffset();
         }
         else
-          return unconvertedTime;
+            return unconvertedTime;
 
     }
 
     public long getOffsetForCoord(Coordinate coord) {
         String zoneId = getZoneIdForCoord(coord);
+        if(zoneId == null)
+            return 0l;
+
         TimeZone tz = TimeZone.getTimeZone(zoneId);
         return tz.getRawOffset();
     }

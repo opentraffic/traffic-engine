@@ -6,6 +6,8 @@ import java.util.List;
 import com.conveyal.osmlib.Way;
 import com.conveyal.traffic.data.SpatialDataItem;
 import com.conveyal.traffic.osm.OSMDataStore;
+import com.conveyal.traffic.osm.OSMUtils;
+import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.LineString;
 import com.vividsolutions.jts.linearref.LengthIndexedLine;
 
@@ -17,12 +19,12 @@ public class StreetSegment extends SpatialDataItem {
 	static String[] tertiaryTypes = {"tertiary"};
 	static String[] residentialTypes = {"residential"};
 
+	public static int TYPE_NON_ROADWAY = 0;
 	public static int TYPE_PRIMARY = 1;
 	public static int TYPE_SECONDARY = 2;
 	public static int TYPE_TERTIARY = 3;
 	public static int TYPE_RESIDENTIAL = 4;
 	public static int TYPE_OTHER = 5;
-	public static int TYPE_NON_ROADWAY = -1;
 
 	//final public Way way;
 	final public long startNodeId; // first node id 
@@ -31,11 +33,10 @@ public class StreetSegment extends SpatialDataItem {
 	final public double length;
 	final public boolean oneway;
 
-	final public String segmentTileId;
-	
 	final public int streetType;
 	
 	public StreetSegment(Way way, long wayId,long startNodeId, long endNodeId, LineString geometry, double length) {
+		super(geometry);
 
 		this.streetType = getRodwayType(way);
 		this.oneway = isOneWay(way);
@@ -43,21 +44,26 @@ public class StreetSegment extends SpatialDataItem {
 		this.wayId = wayId;
 		this.startNodeId = startNodeId;
 		this.endNodeId = endNodeId;
-		
-		this.geometry = geometry;
-		;
-
-		this.segmentTileId = "11_" + OSMDataStore.getTileX(this.geometry.getCoordinate().Y, this.geometry.getCoordinate().X, 11) + "_" + OSMDataStore.getTileY(this.geometry.getCoordinate().Y, this.geometry.getCoordinate().X, 11);
 
 		this.length = length;
-		// create composite segmentId
-		this.id = this.toString();
-
 	}
-	
+
+	public StreetSegment(long id, int streetType, boolean oneway, long wayId,long startNodeId, long endNodeId, Coordinate coords[], double length) {
+		super(id, coords);
+
+		this.streetType = streetType;
+		this.oneway = oneway;
+
+		this.wayId = wayId;
+		this.startNodeId = startNodeId;
+		this.endNodeId = endNodeId;
+
+		this.length = length;
+	}
+
 	public List<TripLine> generateTripLines() {
 		
-		LengthIndexedLine lengthIndexedLine = new LengthIndexedLine(this.geometry);
+		LengthIndexedLine lengthIndexedLine = new LengthIndexedLine(this.getGeometry());
 		
 		double scale = (lengthIndexedLine.getEndIndex() - lengthIndexedLine.getStartIndex()) / this.length;
 		
@@ -68,7 +74,7 @@ public class StreetSegment extends SpatialDataItem {
 	
 		return tripLines;
 	}
-	
+
 	public void truncateGeometry() {
 		//GeometryFactory gf = new GeometryFactory();
 		//this.geometry = gf.createPoint(this.geometry.getCoordinate());

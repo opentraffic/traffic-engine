@@ -3,14 +3,13 @@ package com.conveyal.traffic.osm;
 import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
-import java.net.MalformedURLException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.vividsolutions.jts.geom.Envelope;
 import org.geotools.data.DataUtilities;
-import org.geotools.data.FileDataStoreFactorySpi;
 import org.geotools.data.collection.ListFeatureCollection;
 import org.geotools.data.shapefile.ShapefileDataStore;
 import org.geotools.data.shapefile.ShapefileDataStoreFactory;
@@ -32,6 +31,9 @@ import com.vividsolutions.jts.geom.GeometryFactory;
 import com.vividsolutions.jts.geom.LineString;
 
 public class OSMUtils {
+
+
+
 	static public LineString getLineStringForWay(Way way, OSM osm) {
 		Coordinate[] coords = new Coordinate[way.nodes.length];
 		for (int i = 0; i < coords.length; i++) {
@@ -66,7 +68,7 @@ public class OSMUtils {
         SimpleFeatureBuilder featureBuilder = new SimpleFeatureBuilder(TYPE);
         
         for( SpatialDataItem seg : segs ){
-        	featureBuilder.add( seg.geometry );
+        	featureBuilder.add( seg.getGeometry() );
         	featureBuilder.add( seg.id );
         	SimpleFeature feature = featureBuilder.buildFeature(null);
         	features.add( feature );

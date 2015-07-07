@@ -11,19 +11,19 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Map.Entry;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import com.conveyal.traffic.TrafficEngine;
 import com.conveyal.traffic.data.StatsDataStore;
+import com.conveyal.traffic.data.seralizers.StreetSegmentSerializer;
+import com.conveyal.traffic.data.seralizers.TripLineSerializer;
 import com.conveyal.traffic.stats.SegmentStatistics;
 import com.google.common.io.ByteStreams;
 import org.geotools.referencing.GeodeticCalculator;
 
 import com.conveyal.osmlib.OSM;
 import com.conveyal.osmlib.Way;
-import com.conveyal.traffic.data.ExchangeFormat;
 import com.conveyal.traffic.data.SpatialDataItem;
 import com.conveyal.traffic.data.SpatialDataStore;
 import com.conveyal.traffic.geom.StreetSegment;
@@ -36,8 +36,13 @@ import com.vividsolutions.jts.geom.GeometryFactory;
 import com.vividsolutions.jts.geom.LineString;
 import com.vividsolutions.jts.geom.Point;
 import com.vividsolutions.jts.linearref.LengthIndexedLine;
+import org.mapdb.DB;
+import org.mapdb.DBMaker;
+import org.mapdb.Serializer;
 
 public class OSMDataStore {
+
+	public static int Z_INDEX = 11;
 
 	private static final Logger log = Logger.getLogger( OSMDataStore.class.getName());
 
@@ -58,12 +63,11 @@ public class OSMDataStore {
 	// All triplines
 	public SpatialDataStore triplines;
 	public SpatialDataStore streetSegments;
-	public SpatialDataStore osmCoverage;
 	public StatsDataStore statsDataStore;
 
+	DB db;
+	public Map<String,OSMArea> osmIdMap;
 
-	private ConcurrentHashMap<String,Boolean> segmentsChanged = new ConcurrentHashMap<String,Boolean>();
-	private Integer speedSampleCount = 0;
 
 	private File osmPath;
 	private File dataPath;
@@ -75,11 +79,26 @@ public class OSMDataStore {
 		this.dataPath = dataPath;
 		this.osmServer = osmServer;
 
-		triplines = new SpatialDataStore(dataPath, "tripline", false, false, true);
-		streetSegments = new SpatialDataStore(dataPath, "streets", false, false, true);
-		osmCoverage = new SpatialDataStore(dataPath, "osm", false, false, true);
-		statsDataStore = new StatsDataStore(dataPath);
+		DBMaker dbm = DBMaker.newFileDB(new File(this.dataPath, "osmIds.db"))
+				.closeOnJvmShutdown();
 
+		db = dbm.make();
+
+		DB.BTreeMapMaker maker = db.createTreeMap("osmIds");
+		osmIdMap = maker.makeOrGet();
+
+
+		triplines = new SpatialDataStore(this.dataPath, "tripLines", new TripLineSerializer());
+		streetSegments = new SpatialDataStore(this.dataPath, "streets", new StreetSegmentSerializer());
+		statsDataStore = new StatsDataStore(this.dataPath);
+
+	}
+
+	public void loadOSMTile(double lat, double lon, int z) {
+		int xtile = SpatialDataStore.getTileX(lon, z);
+		int ytile = SpatialDataStore.getTileY(lat, z);
+
+		loadOSMTile(xtile, ytile, z);
 	}
 
 	public void loadOSMTile(int x, int y, int z) {
@@ -88,14 +107,12 @@ public class OSMDataStore {
 		File xDir = new File(zDir, "" + x);
 		File yPbfFile = new File(xDir, y + ".osm.pbf");
 
-		String osmId = z + "_" + x + "_" + y;
+		String osmId = getOsmId(x, y, z);
 
-		Envelope env = tile2Envelope(x, y, z);
+		Envelope env = SpatialDataStore.tile2Envelope(x, y, z);
 
 		if(!yPbfFile.exists()) {
 			xDir.mkdirs();
-
-
 
 			Double south = env.getMinY() < env.getMaxY() ? env.getMinY() : env.getMaxY();
 			Double west = env.getMinX() < env.getMaxX() ? env.getMinX() : env.getMaxX();
@@ -147,7 +164,7 @@ public class OSMDataStore {
 
 	public void loadPbfFile(String osmId, Envelope env, File pbfFile) {
 
-		if(osmCoverage.contains(osmId))
+		if(osmIdMap.get(osmId) != null)
 			return;
 
 		log.log(Level.INFO, "loading osm from: " + pbfFile.getAbsolutePath());
@@ -159,7 +176,7 @@ public class OSMDataStore {
 			// add OSM an truncate geometries
 			OSMArea osmArea = addOsm(osmId, env, osm, false);
 
-			osmCoverage.save(osmArea);
+			osmIdMap.put(osmId, osmArea);
 		}
 		catch (Exception e) {
 			e.printStackTrace();
@@ -172,51 +189,26 @@ public class OSMDataStore {
 
 
 	public synchronized long checkOsm(double lat, double lon) {
-		Envelope env1 = new Envelope();
-		env1.expandToInclude(lon, lat);
 
-		List<SpatialDataItem> osmCoverageList = osmCoverage.getByEnvelope(env1);
-		if(osmCoverageList.size() == 0) {
+		String osmId = getOsmId(lat, lon);
 
-					loadOSMTile(lat,lon, 11);
-			osmCoverageList = osmCoverage.getByEnvelope(env1);
-		}
-		return ((OSMArea) osmCoverageList.get(0)).zoneOffset;
+		if(!osmIdMap.containsKey(osmId))
+			loadOSMTile(lat,lon, Z_INDEX);
 
+		return osmIdMap.get(osmId).zoneOffset;
 	}
 
-	public void loadOSMTile(double lat, double lon, int z) {
-		int xtile = (int)Math.floor( (lon + 180) / 360 * (1<<z) ) ;
-		int ytile = (int)Math.floor( (1 - Math.log(Math.tan(Math.toRadians(lat)) + 1 / Math.cos(Math.toRadians(lat))) / Math.PI) / 2 * (1<<z) ) ;
 
-		loadOSMTile(xtile, ytile, z);
+	public static String getOsmId(double lat, double lon) {
+
+		int x = SpatialDataStore.getTileX(lon, Z_INDEX);
+		int y = SpatialDataStore.getTileY(lat, Z_INDEX);
+
+		return getOsmId(x, y, Z_INDEX);
 	}
 
-	public static int getTileX(final double lat, final double lon, final int zoom) {
-		int xtile = (int)Math.floor( (lon + 180) / 360 * (1<<zoom) ) ;
-		return xtile;
-	}
-
-	public static int getTileY(final double lat, final double lon, final int zoom) {
-		int ytile = (int)Math.floor( (1 - Math.log(Math.tan(Math.toRadians(lat)) + 1 / Math.cos(Math.toRadians(lat))) / Math.PI) / 2 * (1<<zoom) ) ;
-		return ytile;
-	}
-
-	public static double tile2lon(int x, int z) {
-		return x / Math.pow(2.0, z) * 360.0 - 180;
-	}
-
-	public static double tile2lat(int y, int z) {
-		double n = Math.PI - (2.0 * Math.PI * y) / Math.pow(2.0, z);
-		return Math.toDegrees(Math.atan(Math.sinh(n)));
-	}
-
-	public static Envelope tile2Envelope(final int x, final int y, final int zoom) {
-		double maxLat = tile2lat(y, zoom);
-		double minLat = tile2lat(y + 1, zoom);
-		double minLon = tile2lon(x, zoom);
-		double maxLon = tile2lon(x + 1, zoom);
-		return new Envelope(minLon, maxLon, minLat, maxLat);
+	public static String getOsmId(int x, int y, int z) {
+		return  z + "_" + x + "_" + y;
 	}
 	
 	private OSMArea addOsm(String osmId, Envelope env, OSM osm, Boolean keepCompleteGeometries) {
@@ -232,20 +224,17 @@ public class OSMDataStore {
 			if(segment.length > MIN_SEGMENT_LEN) {
 				List<TripLine> tripLines = segment.generateTripLines();
 				for(TripLine tripLine : tripLines) {
-					triplines.saveWithoutCommit(tripLine);
+					triplines.save(tripLine);
 				}
 			}
 			
 			if(!keepCompleteGeometries)
 				segment.truncateGeometry();
 				
-			streetSegments.saveWithoutCommit(segment);
-			env.expandToInclude(segment.geometry.getCoordinate());
+			streetSegments.save(segment);
 			
 			segmentCount++;
 		}
-		streetSegments.commit();
-		triplines.commit();
 
 		long zoneOffset = TrafficEngine.timeConverter.getOffsetForCoord(env.centre());
 
@@ -375,8 +364,6 @@ public class OSMDataStore {
 			}
 		}
 
-
-
 		return newSegments;
 	}
 
@@ -415,7 +402,12 @@ public class OSMDataStore {
 			Point2D tlRight = gc.getDestinationGeographicPoint();
 			gc.setDirection(clampAzimuth(l1Bearing - 90), TRIPLINE_RADIUS);
 			Point2D tlLeft = gc.getDestinationGeographicPoint();
-			TripLine tl = new TripLine(tlRight, tlLeft, streetSegment, triplineIndex, dist);
+
+			Coordinate[] coords = new Coordinate[2];
+			coords[0] = new Coordinate(tlLeft.getX(), tlLeft.getY());
+			coords[1] = new Coordinate(tlRight.getX(), tlRight.getY());
+
+			TripLine tl = new TripLine(coords, streetSegment.id, triplineIndex, dist);
 			return tl;
 		}
 	}
@@ -460,7 +452,7 @@ public class OSMDataStore {
 		return d;
 	}
 	
-	public StreetSegment getStreetSegmentById(String id) {
+	public StreetSegment getStreetSegmentById(Long id) {
 		return (StreetSegment)streetSegments.getById(id);
 	}
 	
@@ -468,45 +460,12 @@ public class OSMDataStore {
 		statsDataStore.addSpeedSample(speedSample);
 	}
 
-	public SummaryStatistics collectSummaryStatisics(String segmentId) {
+	public SummaryStatistics collectSummaryStatisics(Long segmentId) {
 		return statsDataStore.collectSummaryStatisics(segmentId);
 	}
 
-	public SegmentStatistics getSegmentStatisics(String segmentId) {
+	public SegmentStatistics getSegmentStatisics(Long segmentId) {
 		return statsDataStore.getSegmentStatisics(segmentId);
 	}
-	
-	public void collectStatistcs(FileOutputStream os, Envelope env) throws IOException {
-		
-		/*ExchangeFormat.BaselineTile.Builder tile = ExchangeFormat.BaselineTile.newBuilder();
-		
-		tile.setHeader(ExchangeFormat.Header.newBuilder()
-				.setCreationTimestamp(System.currentTimeMillis())
-				.setOsmCommitId(1)
-				.setTileX(1)
-				.setTileY(1)
-				.setTileZ(1));
-		
-		for(SpatialDataItem sdi : getStreetSegments(env)) {
-			StreetSegment streetSegment = (StreetSegment)sdi;
-					
-			SummaryStatistics baseline = streetSegment.segmentStats.collectBaselineStatisics();
-			
-			// skip segments without data
-			if(Double.isNaN(baseline.getAverageSpeedMS()))
-				continue;
-			
-			tile.addSegments(ExchangeFormat.BaselineStats.newBuilder()
-					.setSegment(ExchangeFormat.SegmentDefinition.newBuilder()
-							.setWayId(streetSegment.wayId)
-							.setStartNodeId(streetSegment.startNodeId)
-							.setEndNodeId(streetSegment.endNodeId))
-					.setAverageSpeed((float)baseline.getAverageSpeedKMH())
-					.addAllHourOfWeekAverages(baseline.getAllHourlySpeedsKMHFloatAL()));
-		}
-		
-		os.write(tile.build().toByteArray());
-		os.flush();*/
-	}
-	
+
 }

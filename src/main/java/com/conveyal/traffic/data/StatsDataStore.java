@@ -1,12 +1,15 @@
 package com.conveyal.traffic.data;
 
+import com.conveyal.traffic.data.seralizers.SegmentStatisticsSerializer;
+import com.conveyal.traffic.data.seralizers.TypeStatisticsSerializer;
 import com.conveyal.traffic.stats.SegmentStatistics;
 import com.conveyal.traffic.stats.SpeedSample;
 import com.conveyal.traffic.stats.SummaryStatistics;
+import com.conveyal.traffic.stats.TypeStatistics;
+import org.mapdb.BTreeKeySerializer;
 import org.mapdb.DB;
 import org.mapdb.DB.BTreeMapMaker;
 import org.mapdb.DBMaker;
-import org.mapdb.Serializer;
 
 import java.io.File;
 import java.util.*;
@@ -24,11 +27,11 @@ public class StatsDataStore {
 
 	ExecutorService executor;
 
-	Map<Long, Map<Integer,SegmentStatistics>> weekTypeMap = new ConcurrentHashMap<>();
-	Map<Integer,SegmentStatistics> cumulativeTypeMap;
+	Map<Long, Map<Long,TypeStatistics>> weekTypeMap = new ConcurrentHashMap<>();
+	Map<Long,TypeStatistics> cumulativeTypeMap;
 
-	Map<Long, Map<String,SegmentStatistics>> weekHourMap = new ConcurrentHashMap<>();
-	Map<String,SegmentStatistics> cumulativeHourMap;
+	Map<Long, Map<Long,SegmentStatistics>> weekHourMap = new ConcurrentHashMap<>();
+	Map<Long,SegmentStatistics> cumulativeHourMap;
 
 	Queue<SpeedSample> sampleQueue = new ConcurrentLinkedQueue<>();
 
@@ -42,9 +45,13 @@ public class StatsDataStore {
 			directory.mkdirs();
 
 		DBMaker dbm = DBMaker.newFileDB(new File(directory, "stats.db"))
-			.closeOnJvmShutdown();
-
-		dbm = dbm.cacheWeakRefEnable();
+				.closeOnJvmShutdown()
+				.cacheLRUEnable()
+				.cacheSize(100000)
+				.mmapFileEnable()
+				.asyncWriteEnable()
+				.asyncWriteFlushDelay(10000)
+				.closeOnJvmShutdown();
 
 	    db = dbm.make();
 
@@ -52,48 +59,36 @@ public class StatsDataStore {
 		for(String mapId : maps.keySet()) {
 			if(mapId.startsWith("week_")) {
 				Long week = Long.parseLong(mapId.replace("week_", ""));
-				weekHourMap.put(week, (Map<String,SegmentStatistics>)maps.get(mapId));
+				weekHourMap.put(week, (Map<Long,SegmentStatistics>)maps.get(mapId));
 			}
 
 			if(mapId.startsWith("type_")) {
 				Long week = Long.parseLong(mapId.replace("type_", ""));
-				weekTypeMap.put(week, (Map<Integer, SegmentStatistics>) maps.get(mapId));
+				weekTypeMap.put(week, (Map<Long, TypeStatistics>) maps.get(mapId));
 			}
 		}
 
 		BTreeMapMaker cumulativeHourMaker = db.createTreeMap("cumulativeHourMap");
-		cumulativeHourMaker = cumulativeHourMaker.valueSerializer(Serializer.JAVA);
+		cumulativeHourMaker = cumulativeHourMaker
+				.keySerializer(BTreeKeySerializer.ZERO_OR_POSITIVE_LONG)
+				.valueSerializer(new SegmentStatisticsSerializer());
 		cumulativeHourMap = cumulativeHourMaker.makeOrGet();
 
 		BTreeMapMaker cumulativeTypeMaker = db.createTreeMap("cumulativeTypeMap");
-		cumulativeTypeMaker = cumulativeTypeMaker.valueSerializer(Serializer.JAVA);
+		cumulativeTypeMaker = cumulativeTypeMaker
+				.keySerializer(BTreeKeySerializer.ZERO_OR_POSITIVE_LONG)
+				.valueSerializer(new TypeStatisticsSerializer());
 		cumulativeTypeMap = cumulativeTypeMaker.makeOrGet();
 
 		executor = Executors.newFixedThreadPool(1);
 
 		Runnable statsCollector = () -> {
 
-			int penedingCommit = 0;
 			while(true) {
 				try {
 					SpeedSample speedSample = sampleQueue.poll();
-					if(speedSample == null) {
-						if(penedingCommit > 0){
-							commit();
-							penedingCommit = 0;
-						}
-
-						Thread.sleep(5000);
-					}
-					else {
-						this.save(speedSample, false);
-						penedingCommit++;
-
-						if(penedingCommit > 10000) {
-							commit();
-							penedingCommit = 0;
-						}
-					}
+					if(speedSample != null)
+						this.save(speedSample);
 				}
 				catch (Exception e) {
 					e.printStackTrace();
@@ -104,31 +99,39 @@ public class StatsDataStore {
 		executor.execute(statsCollector);
 	}
 
-	public Map<String,SegmentStatistics> getWeekMap(long week) {
+	public long getSampleQueueSize() {
+		return sampleQueue.size();
+	}
+
+	public Map<Long,SegmentStatistics> getWeekMap(long week) {
 
 		String key = "week_" + week;
 
 		if(!weekHourMap.containsKey(week)) {
 			BTreeMapMaker hourMaker = db.createTreeMap(key);
-			hourMaker = hourMaker.valueSerializer(Serializer.JAVA);
+			hourMaker = hourMaker
+					.keySerializer(BTreeKeySerializer.ZERO_OR_POSITIVE_LONG)
+					.valueSerializer(new SegmentStatisticsSerializer());
 
-			Map<String,SegmentStatistics> weekMap = hourMaker.makeOrGet();
+			Map<Long,SegmentStatistics> weekMap = hourMaker.makeOrGet();
 			weekHourMap.put(week, weekMap);
 		}
 
 		return weekHourMap.get(week);
 	}
 
-	public Map<Integer,SegmentStatistics> getTypeMap(long week) {
+	public Map<Long,TypeStatistics> getTypeMap(long week) {
 
 		String key = "type_" + week;
 
 		if(!cumulativeTypeMap.containsKey(week)) {
-			BTreeMapMaker hourMaker = db.createTreeMap(key);
-			hourMaker = hourMaker.valueSerializer(Serializer.JAVA);
+			BTreeMapMaker typeMaker = db.createTreeMap(key);
+			typeMaker = typeMaker
+					.keySerializer(BTreeKeySerializer.ZERO_OR_POSITIVE_LONG)
+					.valueSerializer(new TypeStatisticsSerializer());
 
-			Map<Integer,SegmentStatistics> weekMap = hourMaker.makeOrGet();
-			weekTypeMap.put(week, weekMap);
+			Map<Long,TypeStatistics> typeMap = typeMaker.makeOrGet();
+			weekTypeMap.put(week, typeMap);
 		}
 
 		return weekTypeMap.get(week);
@@ -144,22 +147,13 @@ public class StatsDataStore {
 		sampleQueue.add(speedSample);
 	}
 
-	public void save(long time, String segmentId, int segmentType, SegmentStatistics segmentStats) {
-		save(time, segmentId, segmentType, segmentStats, true);
-	}
-
-	public void save(long time, String segmentId, int segmentType, SegmentStatistics segmentStats, boolean commit) {
+	public void save(long time, long segmentId, int segmentType, SegmentStatistics segmentStats) {
 
 		long week = SegmentStatistics.getWeekSinceEpoch(time);
 
-		Map<Integer,SegmentStatistics> typeData = getTypeMap(week);
+		Map<Long,TypeStatistics> typeData = getTypeMap(week);
 
-		if(typeData.containsKey(segmentType))
-			typeData.get(segmentType).addStats(segmentStats);
-		else
-			typeData.put(segmentType, segmentStats);
-
-		Map<String,SegmentStatistics> hourData = getWeekMap(week);
+		Map<Long,SegmentStatistics> hourData = getWeekMap(week);
 
 		if(hourData.containsKey(segmentId))
 			hourData.get(segmentId).addStats(segmentStats);
@@ -177,25 +171,23 @@ public class StatsDataStore {
 
 		cumulativeHourMap.put(segmentId, segmentStatistics);
 
-		if(commit)
-			commit();
 	}
 
-	public void save(SpeedSample speedSample, boolean commit) {
+	public void save(SpeedSample speedSample) {
 
 		long week = SegmentStatistics.getWeekSinceEpoch(speedSample.getTime());
 
-		Map<Integer,SegmentStatistics> typeData = getTypeMap(week);
+		/*Map<Long,TypeStatistics> typeData = getTypeMap(week);
 
-		if(typeData.containsKey(speedSample.getSegmentType()))
-			typeData.get(speedSample.getSegmentType()).addSample(speedSample);
+		if(typeData.containsKey(speedSample.getSegmentTileId()))
+			typeData.get(speedSample.getSegmentTileId()).addSample(speedSample);
 		else {
-			SegmentStatistics segmentStatistics = new SegmentStatistics();
-			segmentStatistics.addSample(speedSample);
-			typeData.put(speedSample.getSegmentType(), segmentStatistics);
-		}
+			TypeStatistics typeStatistics = new TypeStatistics();
+			typeStatistics.addSample(speedSample);
+			typeData.put(speedSample.getSegmentTileId(), typeStatistics);
+		}*/
 
-		Map<String,SegmentStatistics> hourData = getWeekMap(week);
+		Map<Long,SegmentStatistics> hourData = getWeekMap(week);
 
 		if(hourData.containsKey(speedSample.getSegmentId()))
 			hourData.get(speedSample.getSegmentId()).addSample(speedSample);
@@ -215,16 +207,9 @@ public class StatsDataStore {
 
 		cumulativeHourMap.put(speedSample.getSegmentId(), segmentStatistics);
 
-		if(commit)
-			commit();
 	}
 
-
-	public void commit() {
-		db.commit();
-	}
-
-	public SummaryStatistics collectSummaryStatisics(String segmentId) {
+	public SummaryStatistics collectSummaryStatisics(Long segmentId) {
 
 		SummaryStatistics summaryStatistics = new SummaryStatistics();
 
@@ -234,7 +219,7 @@ public class StatsDataStore {
 		return summaryStatistics;
 	}
 
-	public SegmentStatistics getSegmentStatisics(String segmentId) {
+	public SegmentStatistics getSegmentStatisics(Long segmentId) {
 		return cumulativeHourMap.get(segmentId);
 	}
 

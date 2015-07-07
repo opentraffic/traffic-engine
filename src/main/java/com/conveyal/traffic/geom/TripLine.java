@@ -11,45 +11,35 @@ import com.vividsolutions.jts.geom.Point;
 
 public class TripLine extends SpatialDataItem {
 
-	final public String segmentId;
-	final public int segmentType;
-	final public long wayId;
-	final public long startNodeId;
-	final public long endNodeId;
+	final public long segmentId;
 	final public int tripLineIndex; // the tripline along the way
-
-	final public String segmentTileId;
-
 	final public double dist;
 
-	public TripLine(Point2D left, Point2D right, StreetSegment streetSegment, int tripLineIndex, double dist) {
-		
-		GeometryFactory gf = new GeometryFactory();
+	public TripLine(Coordinate coords[], long segmentId, int tripLineIndex, double dist) {
+		super(coords);
 
-		Coordinate[] coords = new Coordinate[2];
-		coords[0] = new Coordinate(left.getX(), left.getY());
-		coords[1] = new Coordinate(right.getX(), right.getY());
-		this.geometry = gf.createLineString(coords);
-
-		this.wayId = streetSegment.wayId;
-		this.startNodeId = streetSegment.startNodeId;
-		this.endNodeId = streetSegment.endNodeId;
 		this.tripLineIndex = tripLineIndex;
 		this.dist = dist;
 		
-		this.segmentId = streetSegment.id;
-		this.segmentType = streetSegment.streetType;
-		this.segmentTileId = streetSegment.segmentTileId;
-		
-		this.id = this.toString();
+		this.segmentId = segmentId;
 	}
 
+	public TripLine(long id, Coordinate coords[], long segmentId, int tripLineIndex, double dist) {
+		super(id, coords);
+
+		this.tripLineIndex = tripLineIndex;
+		this.dist = dist;
+
+		this.segmentId = segmentId;
+	}
+
+
 	public String toString() {
-		return "tl_" + wayId + ":" + startNodeId + "-" + endNodeId  + "-" + tripLineIndex;
+		return "tl_" + segmentId + "-" + tripLineIndex;
 	}
 
 	public LineSegment getLineSegment() {
-		return new LineSegment(geometry.getCoordinates()[0], geometry.getCoordinates()[1]);
+		return new LineSegment(this.getCoordinates()[0], this.getCoordinates()[1]);
 	}
 	
 }

@@ -1,12 +1,10 @@
 package com.conveyal.traffic.stats;
 
-import com.conveyal.traffic.geom.StreetSegment;
-
-import javax.swing.event.DocumentEvent;
 import java.io.Serializable;
 import java.time.*;
 import java.time.temporal.ChronoField;
 import java.time.temporal.ChronoUnit;
+
 
 public class SegmentStatistics implements Serializable {
 

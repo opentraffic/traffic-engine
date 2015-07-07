@@ -3,7 +3,9 @@ package com.conveyal.traffic.geom;
 import com.conveyal.traffic.data.TimeConverter;
 import com.vividsolutions.jts.geom.Coordinate;
 
-public class GPSPoint {
+import java.io.Serializable;
+
+public class GPSPoint implements Serializable {
 
 	public long time;
 	public long vehicleId;
@@ -13,7 +15,6 @@ public class GPSPoint {
 
 	public GPSPoint(long time, long vehicleId, double lon, double lat) {
 		this(time, vehicleId, lon, lat, true);
-
 	}
 
 	public GPSPoint(long time, long vehicleId, double lon, double lat, boolean convertToLocaltime) {

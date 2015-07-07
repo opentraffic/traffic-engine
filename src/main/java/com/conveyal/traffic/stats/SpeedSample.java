@@ -7,31 +7,23 @@ import com.conveyal.traffic.geom.StreetSegment;
 
  public class SpeedSample implements Serializable {
 
-	 final String streetSegmentId;
-	 final String streetSegmentTileId;
-	 final int streetSegmentType;
+	 final long segmentId;
 
 	 final long time;
 	 final double speed;
 
-	 public SpeedSample(long time, double speed, String streetSegmentId, String streetSegmentTileId, int streetSegmentType) {
-		 this.streetSegmentId = streetSegmentId;
-		 this.streetSegmentType = streetSegmentType;
-		 this.streetSegmentTileId = streetSegmentTileId;
+	 public SpeedSample(long time, double speed, long segmentId) {
+		 this.segmentId = segmentId;
 		 this.time = time;
 		 this.speed = speed;
 	 }
 
 	 public String toString() {
-		 return "[SpeedSample:" + streetSegmentId + " speed:" + speed + "]";
+		 return "[SpeedSample:" + segmentId + " speed:" + speed + "]";
 	 }
 
-	 public String getSegmentId() {
-		 return this.streetSegmentId;
-	 }
-
-	 public int getSegmentType() {
-		 return this.streetSegmentType;
+	 public long  getSegmentId() {
+		 return this.segmentId;
 	 }
 
 	 public long getTime() {
