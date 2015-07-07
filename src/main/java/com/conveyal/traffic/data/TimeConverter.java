@@ -37,7 +37,7 @@ public class TimeConverter {
         File shapeDir = new File(directory, "world");
         File shapeFile = new File(shapeDir, "tz_world.shp");
 
-        if(!shapeFile.exists()) {
+        /*if(!shapeFile.exists()) {
             try {
                 shapeDir.mkdirs();
 
@@ -125,12 +125,12 @@ public class TimeConverter {
 
         } catch (IOException e) {
             e.printStackTrace();
-        }
+        }*/
 
 
         // disable timezone converter
-        //timePolyIndex = new STRtree(100);
-        //timeZoneIndex = new STRtree(600);
+        timePolyIndex = new STRtree(100);
+        timeZoneIndex = new STRtree(600);
 
         // init SRTree
         timePolyIndex.query(new Envelope(new Coordinate(1,1)));

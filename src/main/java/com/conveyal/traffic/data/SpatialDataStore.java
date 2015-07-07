@@ -1,16 +1,16 @@
 package com.conveyal.traffic.data;
 
 import java.io.File;
-import java.io.IOException;
+import java.time.ZoneId;
 import java.util.*;
 import java.util.Map.Entry;
 
 import org.mapdb.*;
 import org.mapdb.DB.BTreeMapMaker;
-import org.mapdb.Fun.Tuple2;
+import org.mapdb.Fun.Tuple3;
 
 import com.vividsolutions.jts.geom.Envelope;
-import com.vividsolutions.jts.index.quadtree.Quadtree;
+
 
 public class SpatialDataStore {
 
@@ -20,7 +20,7 @@ public class SpatialDataStore {
 	BTreeMap<Long,SpatialDataItem> map;
 
 	/** <<patternId, calendarId>, trip id> */
-	public NavigableSet<Tuple2<Tuple2<Integer, Integer>, Long>> tileIndex;
+	public NavigableSet<Tuple3<Integer, Integer, Long>> tileIndex;
 
 	/**
 	 * Create a new DataStore.
@@ -36,7 +36,7 @@ public class SpatialDataStore {
 				.closeOnJvmShutdown()
 				.mmapFileEnable()
 				.cacheLRUEnable()
-				.cacheSize(1000000);
+				.cacheSize(2000000);
 
 		db = dbm.make();
 
@@ -48,18 +48,52 @@ public class SpatialDataStore {
 
 		map = maker.makeOrGet();
 
-		tileIndex = db.createTreeSet(dataFile + "_tileIndex").makeOrGet();
-
-		// bind tile indexes to item
-		Bind.secondaryKeys(map, tileIndex, (key, spatialDataItem) -> spatialDataItem.getTiles(Z_INDEX));
+		tileIndex = db.createTreeSet(dataFile + "_tileIndex")
+				.serializer(BTreeKeySerializer.TUPLE3).makeOrGet();
 	}
 	
 	public void save(SpatialDataItem obj) {
 		map.put(obj.id, obj);
+
+		for(Tuple3<Integer, Integer, Long> tuple : obj.getTiles(Z_INDEX)) {
+			tileIndex.add(tuple);
+		}
+		db.commit();
+	}
+
+	public void save(List<SpatialDataItem> objs) {
+		for(SpatialDataItem obj : objs) {
+			if(map.containsKey(obj.id))
+				continue;
+
+			map.put(obj.id, obj);
+
+			for(Tuple3<Integer, Integer, Long> tuple : obj.getTiles(Z_INDEX)) {
+				tileIndex.add(tuple);
+			}
+		}
+		db.commit();
+	}
+
+	public void delete(List<SpatialDataItem> objs) {
+		for (SpatialDataItem obj : objs) {
+			if(!map.containsKey(obj.id))
+				continue;
+
+			map.remove(obj.id);
+			for (Tuple3<Integer, Integer, Long> tuple : obj.getTiles(Z_INDEX)) {
+				tileIndex.remove(tuple);
+			}
+		}
+		db.commit();
 	}
 
 	public void delete(SpatialDataItem obj) {
 		map.remove(obj.id);
+		for(Tuple3<Integer, Integer, Long> tuple : obj.getTiles(Z_INDEX)) {
+			tileIndex.remove(tuple);
+		}
+
 	}
 
 	public SpatialDataItem getById(Long id) {
@@ -67,39 +101,6 @@ public class SpatialDataStore {
 	}
 	
 	public List<SpatialDataItem> getByEnvelope(Envelope env) {
-
-		List<SpatialDataItem> items = new ArrayList();
-		HashSet<Long> foundItems = new HashSet();
-
-		for(Tuple2 tile : getTilesForEnvelope(env)) {
-			for(Object o : Fun.filter(tileIndex, tile)) {
-				if (!foundItems.contains(o)) {
-					foundItems.add((Long)o);
-					items.add(map.get(o));
-				}
-			}
-		}
-
-		return items;
-	}
-	
-	public Collection<SpatialDataItem> getAll() {
-		return map.values();
-	}
-
-	public Collection<Entry<Long, SpatialDataItem>> getEntries () {
-		return map.entrySet();
-	}
-	
-	public Integer size() {
-		return map.keySet().size();
-	}
-	
-	public boolean contains (Long id) {
-		return map.containsKey(id);
-	}
-
-	public Fun.Tuple2<Integer, Integer>[] getTilesForEnvelope(Envelope env) {
 
 		int y1 = getTileY(env.getMinY(), Z_INDEX);
 		int x1 = getTileX(env.getMinX(), Z_INDEX);
@@ -133,20 +134,39 @@ public class SpatialDataStore {
 		minY--;
 		maxY++;
 
-		int tileCount = (Math.abs(maxX - minX) + 1) * (Math.abs(maxY - minY) + 1);
+		List<SpatialDataItem> items = new ArrayList();
 
-		Fun.Tuple2<Integer, Integer>[] tiles = new Fun.Tuple2[tileCount];
-
-		int i = 0;
 		for(int tileX = minX; tileX <= maxX; tileX++) {
-			for(int tileY = minY; tileY <= maxY; tileY++) {
-				tiles[i] = new Fun.Tuple2(tileX, tileY);
-				i++;
+			NavigableSet<Tuple3<Integer, Integer, Long>> xSubset = tileIndex.subSet(
+					new Tuple3(tileX, minY, null), true, // inclusive lower bound, null tests lower than anything
+					new Tuple3(tileX, maxY, Fun.HI), true  // inclusive upper bound, HI tests higher than anything
+			);
+
+			for (Tuple3<Integer, Integer, Long> item : xSubset) {
+				items.add(map.get(item.c));
 			}
 		}
 
-		return tiles;
+		return items;
 	}
+	
+	public Collection<SpatialDataItem> getAll() {
+		return map.values();
+	}
+
+	public Collection<Entry<Long, SpatialDataItem>> getEntries () {
+		return map.entrySet();
+	}
+	
+	public Integer size() {
+		return map.keySet().size();
+	}
+	
+	public boolean contains (Long id) {
+		return map.containsKey(id);
+	}
+
+
 
 	public static int getTileX(final double lon, final int zoom) {
 		int xtile = (int)Math.floor( (lon + 180) / 360 * (1<<zoom) ) ;

@@ -58,7 +58,7 @@ public abstract class  SpatialDataItem implements Serializable {
 		}
 	}
 
-	public Fun.Tuple2<Integer, Integer>[] getTiles(int zIndex) {
+	public Fun.Tuple3<Integer, Integer, Long>[] getTiles(int zIndex) {
 
 		int minY = Integer.MAX_VALUE;
 		int minX = Integer.MAX_VALUE;
@@ -82,12 +82,12 @@ public abstract class  SpatialDataItem implements Serializable {
 
 		int tileCount = (maxX - minX + 1) * (maxY - minY + 1);
 
-		Fun.Tuple2<Integer, Integer>[] tiles = new Fun.Tuple2[tileCount];
+		Fun.Tuple3<Integer, Integer, Long>[] tiles = new Fun.Tuple3[tileCount];
 
 		int i = 0;
 		for(int tileX = minX; tileX <= maxX; tileX++) {
 			for(int tileY = minY; tileY <= maxY; tileY++) {
-				tiles[i] = new Fun.Tuple2(tileX, tileY);
+				tiles[i] = new Fun.Tuple3(tileX, tileY, this.id);
 				i++;
 			}
 		}

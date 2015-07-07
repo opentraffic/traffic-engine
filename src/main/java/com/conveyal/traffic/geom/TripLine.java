@@ -39,7 +39,8 @@ public class TripLine extends SpatialDataItem {
 	}
 
 	public LineSegment getLineSegment() {
-		return new LineSegment(this.getCoordinates()[0], this.getCoordinates()[1]);
+		Coordinate[] coords =  this.getCoordinates();
+		return new LineSegment(coords[0], coords[1]);
 	}
 	
 }

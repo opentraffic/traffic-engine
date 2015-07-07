@@ -50,8 +50,7 @@ public class StatsDataStore {
 				.cacheSize(100000)
 				.mmapFileEnable()
 				.asyncWriteEnable()
-				.asyncWriteFlushDelay(10000)
-				.closeOnJvmShutdown();
+				.asyncWriteFlushDelay(10000);
 
 	    db = dbm.make();
 
@@ -170,6 +169,10 @@ public class StatsDataStore {
 		segmentStatistics.addStats(segmentStats);
 
 		cumulativeHourMap.put(segmentId, segmentStatistics);
+
+
+
+
 
 	}
 

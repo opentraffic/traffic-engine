@@ -79,6 +79,9 @@ public class OSMDataStore {
 		this.dataPath = dataPath;
 		this.osmServer = osmServer;
 
+		this.osmPath.mkdirs();
+		this.dataPath.mkdirs();
+
 		DBMaker dbm = DBMaker.newFileDB(new File(this.dataPath, "osmIds.db"))
 				.closeOnJvmShutdown();
 
@@ -87,6 +90,7 @@ public class OSMDataStore {
 		DB.BTreeMapMaker maker = db.createTreeMap("osmIds");
 		osmIdMap = maker.makeOrGet();
 
+		osmIdMap.keySet().forEach(System.out::println);
 
 		triplines = new SpatialDataStore(this.dataPath, "tripLines", new TripLineSerializer());
 		streetSegments = new SpatialDataStore(this.dataPath, "streets", new StreetSegmentSerializer());
@@ -177,6 +181,7 @@ public class OSMDataStore {
 			OSMArea osmArea = addOsm(osmId, env, osm, false);
 
 			osmIdMap.put(osmId, osmArea);
+			db.commit();
 		}
 		catch (Exception e) {
 			e.printStackTrace();
@@ -214,27 +219,27 @@ public class OSMDataStore {
 	private OSMArea addOsm(String osmId, Envelope env, OSM osm, Boolean keepCompleteGeometries) {
 		
 		List<StreetSegment> segments = getStreetSegments(osm);
-		
-		Integer segmentCount = 0;
-		
+		List<SpatialDataItem> segmentItems = new ArrayList<>();
+		List<SpatialDataItem> triplineItems = new ArrayList<>();
+
 		for(StreetSegment segment : segments) {
-			if(streetSegments.contains(segment.id))
-				continue;
-			
+
 			if(segment.length > MIN_SEGMENT_LEN) {
 				List<TripLine> tripLines = segment.generateTripLines();
 				for(TripLine tripLine : tripLines) {
-					triplines.save(tripLine);
+					triplineItems.add(tripLine);
 				}
 			}
 			
 			if(!keepCompleteGeometries)
 				segment.truncateGeometry();
-				
-			streetSegments.save(segment);
-			
-			segmentCount++;
+
+			segmentItems.add(segment);
+
 		}
+
+		streetSegments.save(segmentItems);
+		triplines.save(triplineItems);
 
 		long zoneOffset = TrafficEngine.timeConverter.getOffsetForCoord(env.centre());
 
