@@ -10,6 +10,7 @@ import org.mapdb.BTreeKeySerializer;
 import org.mapdb.DB;
 import org.mapdb.DB.BTreeMapMaker;
 import org.mapdb.DBMaker;
+import org.mapdb.Store;
 
 import java.io.File;
 import java.util.*;
@@ -17,6 +18,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Logger;
 
 public class StatsDataStore {
@@ -34,6 +36,7 @@ public class StatsDataStore {
 	Map<Long,SegmentStatistics> cumulativeHourMap;
 
 	Queue<SpeedSample> sampleQueue = new ConcurrentLinkedQueue<>();
+	AtomicLong processedSamples = new AtomicLong();
 
 	/**
 	 * Create a new DataStore.
@@ -45,12 +48,12 @@ public class StatsDataStore {
 			directory.mkdirs();
 
 		DBMaker dbm = DBMaker.newFileDB(new File(directory, "stats.db"))
-				.closeOnJvmShutdown()
+				.mmapFileEnableIfSupported()
 				.cacheLRUEnable()
 				.cacheSize(100000)
-				.mmapFileEnable()
 				.asyncWriteEnable()
-				.asyncWriteFlushDelay(10000);
+				.asyncWriteFlushDelay(1000)
+				.closeOnJvmShutdown();
 
 	    db = dbm.make();
 
@@ -83,11 +86,23 @@ public class StatsDataStore {
 
 		Runnable statsCollector = () -> {
 
+			int sampleCount = 0;
+
 			while(true) {
 				try {
+
 					SpeedSample speedSample = sampleQueue.poll();
+					processedSamples.incrementAndGet();
+					sampleCount++;
 					if(speedSample != null)
 						this.save(speedSample);
+					else
+						Thread.sleep(1000);
+
+					if(sampleCount > 100000) {
+						this.db.commit();
+						sampleCount = 0;
+					}
 				}
 				catch (Exception e) {
 					e.printStackTrace();
@@ -98,8 +113,17 @@ public class StatsDataStore {
 		executor.execute(statsCollector);
 	}
 
+	public String getStatistics() {
+		Store store = Store.forDB(db);
+		return  "Stats: " + store.calculateStatistics();
+	}
+
 	public long getSampleQueueSize() {
 		return sampleQueue.size();
+	}
+
+	public long getProcessedSamples() {
+		return processedSamples.get();
 	}
 
 	public Map<Long,SegmentStatistics> getWeekMap(long week) {
@@ -170,10 +194,6 @@ public class StatsDataStore {
 
 		cumulativeHourMap.put(segmentId, segmentStatistics);
 
-
-
-
-
 	}
 
 	public void save(SpeedSample speedSample) {
@@ -212,11 +232,17 @@ public class StatsDataStore {
 
 	}
 
-	public SummaryStatistics collectSummaryStatisics(Long segmentId) {
+	public SummaryStatistics collectSummaryStatisics(Long segmentId, Integer week) {
 
 		SummaryStatistics summaryStatistics = new SummaryStatistics();
 
-		if(cumulativeHourMap.containsKey(segmentId))
+		if(week != null) {
+			Map<Long,SegmentStatistics> hourData = getWeekMap(week);
+
+			if(hourData.containsKey(segmentId))
+				summaryStatistics = hourData.get(segmentId).collectSummaryStatisics();
+		}
+		else if(cumulativeHourMap.containsKey(segmentId))
 			summaryStatistics = cumulativeHourMap.get(segmentId).collectSummaryStatisics();
 
 		return summaryStatistics;

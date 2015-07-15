@@ -37,7 +37,7 @@ public class TimeConverter {
         File shapeDir = new File(directory, "world");
         File shapeFile = new File(shapeDir, "tz_world.shp");
 
-        /*if(!shapeFile.exists()) {
+       /*if(!shapeFile.exists()) {
             try {
                 shapeDir.mkdirs();
 

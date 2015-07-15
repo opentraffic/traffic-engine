@@ -1,17 +1,46 @@
 package com.conveyal.traffic.data;
 
 import java.io.Serializable;
+import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicLong;
 
+import com.conveyal.traffic.geom.GPSPoint;
 import com.vividsolutions.jts.geom.*;
 import org.mapdb.Fun;
 
 public abstract class  SpatialDataItem implements Serializable {
 
 	private static final long serialVersionUID = 1L;
+	private static AtomicLong nextId = new AtomicLong();
+
 	final public Long id;
+
 	final public double lons[];
 	final public double lats[];
+
+	public String uniqueId;
+
+	public SpatialDataItem(Long id, Geometry geom) {
+		this.id = id;
+
+		if(geom.getGeometryType().equals("LineString")) {
+
+			Coordinate coords[] = geom.getCoordinates();
+			lons = new double[coords.length];
+			lats = new double[coords.length];
+
+			for(int i = 0; i < coords.length; i++) {
+				lons[i] = coords[i].x;
+				lats[i] = coords[i].y;
+			}
+		}
+		else {
+			lons = new double[0];
+			lats = new double[0];
+			new Exception("Can't store non LineString geometries.");
+		}
+	}
 
 	public SpatialDataItem(Geometry geom) {
 		id = newId();
@@ -31,6 +60,20 @@ public abstract class  SpatialDataItem implements Serializable {
 			lons = new double[0];
 			lats = new double[0];
 			new Exception("Can't store non LineString geometries.");
+		}
+	}
+
+	public SpatialDataItem(List<GPSPoint> points) {
+		id = newId();
+
+		lons = new double[points.size()];
+		lats = new double[points.size()];
+
+		int i =0;
+		for(GPSPoint point : points) {
+			lons[i] = point.lon;
+			lats[i] = point.lat;
+			i++;
 		}
 	}
 
@@ -120,7 +163,7 @@ public abstract class  SpatialDataItem implements Serializable {
 	}
 
 	public static long newId() {
-		return Math.abs(UUID.randomUUID().getLeastSignificantBits());
+		return nextId.incrementAndGet();
 	}
 	
 }

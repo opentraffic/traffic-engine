@@ -4,28 +4,25 @@ import java.awt.geom.Point2D;
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.Map.Entry;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import com.conveyal.osmlib.Node;
 import com.conveyal.traffic.TrafficEngine;
-import com.conveyal.traffic.data.StatsDataStore;
+import com.conveyal.traffic.data.*;
+import com.conveyal.traffic.data.seralizers.OffMapTraceSerializer;
 import com.conveyal.traffic.data.seralizers.StreetSegmentSerializer;
 import com.conveyal.traffic.data.seralizers.TripLineSerializer;
+import com.conveyal.traffic.geom.Jumper;
+import com.conveyal.traffic.geom.OffMapTrace;
 import com.conveyal.traffic.stats.SegmentStatistics;
 import com.google.common.io.ByteStreams;
 import org.geotools.referencing.GeodeticCalculator;
 
 import com.conveyal.osmlib.OSM;
 import com.conveyal.osmlib.Way;
-import com.conveyal.traffic.data.SpatialDataItem;
-import com.conveyal.traffic.data.SpatialDataStore;
 import com.conveyal.traffic.geom.StreetSegment;
 import com.conveyal.traffic.geom.TripLine;
 import com.conveyal.traffic.stats.SummaryStatistics;
@@ -38,7 +35,7 @@ import com.vividsolutions.jts.geom.Point;
 import com.vividsolutions.jts.linearref.LengthIndexedLine;
 import org.mapdb.DB;
 import org.mapdb.DBMaker;
-import org.mapdb.Serializer;
+import org.mapdb.Fun;
 
 public class OSMDataStore {
 
@@ -51,6 +48,7 @@ public class OSMDataStore {
 	// The distance of a tripline to one side of the street. The width of the tripline is twice the radius.
 	public static final double TRIPLINE_RADIUS = 10;
 
+	public boolean loadingOSM = false;
 
 	// Minimum distance of a way tracked by the traffic engine. Must be longer than twice the intersection margin, or else
 	// triplines would be placed out of order.
@@ -62,18 +60,23 @@ public class OSMDataStore {
 	
 	// All triplines
 	public SpatialDataStore triplines;
-	public SpatialDataStore streetSegments;
+	public StreetDataStore streetSegments;
+	public SpatialDataStore offMapTraces;
+	public JumperDataStore jumperDataStore;
 	public StatsDataStore statsDataStore;
 
 	DB db;
-	public Map<String,OSMArea> osmIdMap;
+	public Map<Fun.Tuple2<Integer, Integer>, OSMArea> osmAreas;
 
 
 	private File osmPath;
 	private File dataPath;
 	private String osmServer;
 
-	public OSMDataStore(File dataPath, File osmPath, String osmServer) {
+	public OSMDataStore(File dataPath, File osmPath, String osmServer, Integer cacheSize) {
+
+
+		log.log(Level.INFO, "Initializing OSM Data Store");
 
 		this.osmPath = osmPath;
 		this.dataPath = dataPath;
@@ -82,40 +85,57 @@ public class OSMDataStore {
 		this.osmPath.mkdirs();
 		this.dataPath.mkdirs();
 
-		DBMaker dbm = DBMaker.newFileDB(new File(this.dataPath, "osmIds.db"))
+		DBMaker dbm = DBMaker.newFileDB(new File(this.dataPath, "osmAreas.db"))
 				.closeOnJvmShutdown();
 
 		db = dbm.make();
 
-		DB.BTreeMapMaker maker = db.createTreeMap("osmIds");
-		osmIdMap = maker.makeOrGet();
+		DB.BTreeMapMaker maker = db.createTreeMap("osmAreas");
+		osmAreas = maker.makeOrGet();
 
-		osmIdMap.keySet().forEach(System.out::println);
-
-		triplines = new SpatialDataStore(this.dataPath, "tripLines", new TripLineSerializer());
-		streetSegments = new SpatialDataStore(this.dataPath, "streets", new StreetSegmentSerializer());
+		triplines = new SpatialDataStore(this.dataPath, "tripLines", new TripLineSerializer(), cacheSize);
+		streetSegments = new StreetDataStore(this.dataPath, "streets", new StreetSegmentSerializer(), cacheSize);
+		offMapTraces = new SpatialDataStore(this.dataPath, "offMapTraces", new OffMapTraceSerializer(), cacheSize);
 		statsDataStore = new StatsDataStore(this.dataPath);
+		jumperDataStore = new JumperDataStore(this.dataPath);
+
+		log.log(Level.INFO, "OSM Tiles Loaded: " + osmAreas.size());
+		log.log(Level.INFO, "streetSegments: " + streetSegments.size());
+		log.log(Level.INFO, "triplines: " + triplines.size());
+		log.log(Level.INFO, "statsDataStore: " + statsDataStore.size());
+	}
+
+	public boolean isLoadingOSM() {
+		return loadingOSM;
+	}
+
+	public void printCacheStatistics() {
+
+		log.log(Level.INFO, "Cache Statistics");
+		log.log(Level.INFO,streetSegments.getStatistics());
+		log.log(Level.INFO,triplines.getStatistics());
+		log.log(Level.INFO,statsDataStore.getStatistics());
 
 	}
 
-	public void loadOSMTile(double lat, double lon, int z) {
-		int xtile = SpatialDataStore.getTileX(lon, z);
-		int ytile = SpatialDataStore.getTileY(lat, z);
-
-		loadOSMTile(xtile, ytile, z);
+	public void saveOffMapTrace(OffMapTrace trace) {
+		offMapTraces.save(trace);
+		//System.out.println("Off map trace " + trace.startId + " to " + trace.endId + ": " + trace.lats.length + " points");
 	}
 
-	public void loadOSMTile(int x, int y, int z) {
 
-		File zDir = new File(osmPath, "" + z);
-		File xDir = new File(zDir, "" + x);
-		File yPbfFile = new File(xDir, y + ".osm.pbf");
+	public void loadOSMTile(Fun.Tuple2<Integer, Integer> tile) {
 
-		String osmId = getOsmId(x, y, z);
+		if(osmAreas.containsKey(tile))
+			return;
 
-		Envelope env = SpatialDataStore.tile2Envelope(x, y, z);
+		File zDir = new File(osmPath, "" + Z_INDEX);
+		File xDir = new File(zDir, "" + tile.a);
+		File pbfFile = new File(xDir, tile.b + ".osm.pbf");
 
-		if(!yPbfFile.exists()) {
+		Envelope env = SpatialDataStore.tile2Envelope(tile.a, tile.b, Z_INDEX);
+
+		if(!pbfFile.exists()) {
 			xDir.mkdirs();
 
 			Double south = env.getMinY() < env.getMaxY() ? env.getMinY() : env.getMaxY();
@@ -148,12 +168,12 @@ public class OSMDataStore {
 
 				// download the file
 				InputStream is = conn.getInputStream();
-				OutputStream os = new FileOutputStream(yPbfFile);
+				OutputStream os = new FileOutputStream(pbfFile);
 				ByteStreams.copy(is, os);
 				is.close();
 				os.close();
 
-				loadPbfFile(osmId, env, yPbfFile);
+				loadPbfFile(tile, env, pbfFile);
 
 
 			} catch (IOException e) {
@@ -162,14 +182,11 @@ public class OSMDataStore {
 			}
 		}
 		else
-			loadPbfFile(osmId, env, yPbfFile);
+			loadPbfFile(tile, env, pbfFile);
 
 	}
 
-	public void loadPbfFile(String osmId, Envelope env, File pbfFile) {
-
-		if(osmIdMap.get(osmId) != null)
-			return;
+	public void loadPbfFile(Fun.Tuple2<Integer, Integer> tile, Envelope env, File pbfFile) {
 
 		log.log(Level.INFO, "loading osm from: " + pbfFile.getAbsolutePath());
 
@@ -178,10 +195,7 @@ public class OSMDataStore {
 		osm.readFromFile(pbfFile.getAbsolutePath().toString());
 		try {
 			// add OSM an truncate geometries
-			OSMArea osmArea = addOsm(osmId, env, osm, false);
-
-			osmIdMap.put(osmId, osmArea);
-			db.commit();
+			OSMArea osmArea = addOsm(tile, env, osm, false);
 		}
 		catch (Exception e) {
 			e.printStackTrace();
@@ -193,42 +207,73 @@ public class OSMDataStore {
 	}
 
 
-	public synchronized long checkOsm(double lat, double lon) {
+	public OSMArea checkOsm(double lat, double lon) {
 
-		String osmId = getOsmId(lat, lon);
+		Fun.Tuple2<Integer, Integer> tile = getOsmId(lat, lon);
 
-		if(!osmIdMap.containsKey(osmId))
-			loadOSMTile(lat,lon, Z_INDEX);
-
-		return osmIdMap.get(osmId).zoneOffset;
+		if(!osmAreas.containsKey(tile)){
+			synchronized (this){
+				loadingOSM = true;
+				loadOSMTile(tile);
+				loadingOSM = false;
+			}
+		}
+		return osmAreas.get(tile);
 	}
 
 
-	public static String getOsmId(double lat, double lon) {
+	public static Fun.Tuple2<Integer, Integer> getOsmId(double lat, double lon) {
 
 		int x = SpatialDataStore.getTileX(lon, Z_INDEX);
 		int y = SpatialDataStore.getTileY(lat, Z_INDEX);
 
-		return getOsmId(x, y, Z_INDEX);
+		return new Fun.Tuple2<Integer, Integer>(x, y);
 	}
 
-	public static String getOsmId(int x, int y, int z) {
-		return  z + "_" + x + "_" + y;
-	}
-	
-	private OSMArea addOsm(String osmId, Envelope env, OSM osm, Boolean keepCompleteGeometries) {
-		
+	private OSMArea addOsm(Fun.Tuple2<Integer, Integer> tile, Envelope env, OSM osm, Boolean keepCompleteGeometries) {
+
+
+		String placeName = null;
+		Long placePop = null;
+
+		for( Entry<Long, Node> entry : osm.nodes.entrySet() ) {
+
+			Long id = entry.getKey();
+			Node node = entry.getValue();
+			if (id ==259009337) {
+				try {
+					long pop = Long.parseLong(node.getTag("population"));
+					if (placePop == null || placePop < pop) {
+						placePop = pop;
+						placeName = node.getTag("name");
+					}
+				} catch (Exception e) {
+
+				}
+			}
+		}
+
+
+
 		List<StreetSegment> segments = getStreetSegments(osm);
+
+
 		List<SpatialDataItem> segmentItems = new ArrayList<>();
 		List<SpatialDataItem> triplineItems = new ArrayList<>();
 
 		for(StreetSegment segment : segments) {
+
+			if(streetSegments.contains(segment.getSegmentId()))
+				continue;
 
 			if(segment.length > MIN_SEGMENT_LEN) {
 				List<TripLine> tripLines = segment.generateTripLines();
 				for(TripLine tripLine : tripLines) {
 					triplineItems.add(tripLine);
 				}
+			}
+			else {
+				jumperDataStore.addJumper(new Jumper(segment));
 			}
 			
 			if(!keepCompleteGeometries)
@@ -239,17 +284,32 @@ public class OSMDataStore {
 		}
 
 		streetSegments.save(segmentItems);
+		jumperDataStore.save();
+
 		triplines.save(triplineItems);
 
 		long zoneOffset = TrafficEngine.timeConverter.getOffsetForCoord(env.centre());
 
-		return new OSMArea(osmId, zoneOffset, env);
+		OSMArea osmArea = new OSMArea(tile.a, tile.b, Z_INDEX, placeName, placePop, zoneOffset, env);
+
+		osmAreas.put(tile, osmArea);
+		db.commit();
+
+		System.out.println("Loaded OSM " + tile.a + ", " + tile.b);
+		if(placeName != null)
+			System.out.println("\t" + placeName + ", " + placePop);
+
+		return osmArea;
 	}
 	
 	public List<SpatialDataItem> getStreetSegments(Envelope env) {
 		return streetSegments.getByEnvelope(env);
 	}
-	
+
+	public List<SpatialDataItem> getOffMapTraces(Envelope env) {
+		return offMapTraces.getByEnvelope(env);
+	}
+
 	public List<SpatialDataItem> getTripLines(Envelope env) {
 		return triplines.getByEnvelope(env);
 	}
@@ -307,6 +367,7 @@ public class OSMDataStore {
 
 			Long wayId = entry.getKey();
 			Way way  = entry.getValue();
+
 
 			// only find segments for traffic edges
 			if(!StreetSegment.isTrafficEdge(way))
@@ -380,7 +441,7 @@ public class OSMDataStore {
 	 * @param lat2
 	 * @return
 	 */
-	private static double getDistance(double lon1, double lat1, double lon2, double lat2) {
+	public static double getDistance(double lon1, double lat1, double lon2, double lat2) {
 		synchronized(gc) {
 			gc.setStartingGeographicPoint(lon1, lat1);
 			gc.setDestinationGeographicPoint(lon2, lat2);
@@ -465,8 +526,8 @@ public class OSMDataStore {
 		statsDataStore.addSpeedSample(speedSample);
 	}
 
-	public SummaryStatistics collectSummaryStatisics(Long segmentId) {
-		return statsDataStore.collectSummaryStatisics(segmentId);
+	public SummaryStatistics collectSummaryStatisics(Long segmentId, Integer week) {
+		return statsDataStore.collectSummaryStatisics(segmentId, week);
 	}
 
 	public SegmentStatistics getSegmentStatisics(Long segmentId) {

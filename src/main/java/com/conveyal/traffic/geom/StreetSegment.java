@@ -2,6 +2,7 @@ package com.conveyal.traffic.geom;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 import com.conveyal.osmlib.Way;
 import com.conveyal.traffic.data.SpatialDataItem;
@@ -10,6 +11,7 @@ import com.conveyal.traffic.osm.OSMUtils;
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.LineString;
 import com.vividsolutions.jts.linearref.LengthIndexedLine;
+import org.mapdb.Fun;
 
 public class StreetSegment extends SpatialDataItem {
 
@@ -36,7 +38,7 @@ public class StreetSegment extends SpatialDataItem {
 	final public int streetType;
 	
 	public StreetSegment(Way way, long wayId,long startNodeId, long endNodeId, LineString geometry, double length) {
-		super(geometry);
+		super(SpatialDataItem.newId(), geometry);
 
 		this.streetType = getRodwayType(way);
 		this.oneway = isOneWay(way);
@@ -61,6 +63,19 @@ public class StreetSegment extends SpatialDataItem {
 		this.length = length;
 	}
 
+	public boolean disjoint(StreetSegment segment) {
+		if(segment.endNodeId == this.startNodeId || this.endNodeId == segment.startNodeId)
+			return false;
+
+		double dist1 = OSMDataStore.getDistance(this.lons[this.lons.length-1], this.lats[this.lons.length-1], segment.lons[0], segment.lats[0]);
+		double dist2 = OSMDataStore.getDistance(this.lons[0], this.lats[0], segment.lons[segment.lons.length-1], segment.lats[segment.lons.length-1]);
+
+		if(dist1 < OSMDataStore.MIN_SEGMENT_LEN || dist2 < OSMDataStore.MIN_SEGMENT_LEN)
+			return false;
+
+		return true;
+	}
+
 	public List<TripLine> generateTripLines() {
 		
 		LengthIndexedLine lengthIndexedLine = new LengthIndexedLine(this.getGeometry());
@@ -78,6 +93,10 @@ public class StreetSegment extends SpatialDataItem {
 	public void truncateGeometry() {
 		//GeometryFactory gf = new GeometryFactory();
 		//this.geometry = gf.createPoint(this.geometry.getCoordinate());
+	}
+
+	public Fun.Tuple3<Long, Long, Long> getSegmentId() {
+		return new Fun.Tuple3<>(this.wayId, this.startNodeId, this.endNodeId);
 	}
 	
 	public String toString() {

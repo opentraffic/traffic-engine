@@ -1,11 +1,15 @@
 package com.conveyal.traffic.geom;
 
+import com.conveyal.traffic.data.SpatialDataItem;
+import com.conveyal.traffic.data.SpatialDataStore;
 import com.conveyal.traffic.data.TimeConverter;
+import com.conveyal.traffic.osm.OSMDataStore;
 import com.vividsolutions.jts.geom.Coordinate;
+import org.mapdb.Fun;
 
 import java.io.Serializable;
 
-public class GPSPoint implements Serializable {
+public class GPSPoint implements Serializable,  Comparable<GPSPoint>  {
 
 	public long time;
 	public long vehicleId;
@@ -33,5 +37,18 @@ public class GPSPoint implements Serializable {
 	public void offsetTime(long offset) {
 		if(convertToLocaltime)
 			this.time += offset;
+	}
+
+	@Override
+	public int compareTo(GPSPoint gpsPoint) {
+		return Long.compare(this.time, gpsPoint.time);
+	}
+
+	public Fun.Tuple2<Integer, Integer> getTile() {
+
+		Integer tileX = SpatialDataStore.getTileX(lon, OSMDataStore.Z_INDEX);
+		Integer tileY = SpatialDataStore.getTileY(lat, OSMDataStore.Z_INDEX);
+
+		return new Fun.Tuple2<>(tileX, tileY);
 	}
 }

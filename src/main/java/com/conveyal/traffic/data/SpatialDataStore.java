@@ -19,6 +19,8 @@ public class SpatialDataStore {
 	DB db;
 	BTreeMap<Long,SpatialDataItem> map;
 
+	String dataFile;
+
 	/** <<patternId, calendarId>, trip id> */
 	public NavigableSet<Tuple3<Integer, Integer, Long>> tileIndex;
 
@@ -27,29 +29,34 @@ public class SpatialDataStore {
 	 * @param directory Where should it be created?
 	 * @param dataFile What should it be called?
 	 */
-	public SpatialDataStore(File directory, String dataFile, Serializer serializer) {
-	
+	public SpatialDataStore(File directory, String dataFile, Serializer serializer, Integer cacheSize) {
+
+		this.dataFile = dataFile;
+
 		if(!directory.exists())
 			directory.mkdirs();
 		
 		DBMaker dbm = DBMaker.newFileDB(new File(directory, dataFile + ".db"))
-				.closeOnJvmShutdown()
-				.mmapFileEnable()
+				.mmapFileEnableIfSupported()
 				.cacheLRUEnable()
-				.cacheSize(2000000);
+				.cacheSize(cacheSize)
+				.closeOnJvmShutdown();
 
 		db = dbm.make();
 
-		
-	    BTreeMapMaker maker = db.createTreeMap(dataFile);
-
-	    maker = maker.valueSerializer(serializer)
+	    BTreeMapMaker maker = db.createTreeMap(dataFile)
+				.valueSerializer(serializer)
 				.keySerializer(BTreeKeySerializer.ZERO_OR_POSITIVE_LONG);
 
 		map = maker.makeOrGet();
 
 		tileIndex = db.createTreeSet(dataFile + "_tileIndex")
 				.serializer(BTreeKeySerializer.TUPLE3).makeOrGet();
+	}
+
+	public String getStatistics() {
+		Store store = Store.forDB(db);
+		return dataFile + ": " + store.calculateStatistics();
 	}
 	
 	public void save(SpatialDataItem obj) {
@@ -63,12 +70,12 @@ public class SpatialDataStore {
 
 	public void save(List<SpatialDataItem> objs) {
 		for(SpatialDataItem obj : objs) {
-			if(map.containsKey(obj.id))
+			if (map.containsKey(obj.id))
 				continue;
 
 			map.put(obj.id, obj);
 
-			for(Tuple3<Integer, Integer, Long> tuple : obj.getTiles(Z_INDEX)) {
+			for (Tuple3<Integer, Integer, Long> tuple : obj.getTiles(Z_INDEX)) {
 				tileIndex.add(tuple);
 			}
 		}
@@ -93,7 +100,7 @@ public class SpatialDataStore {
 		for(Tuple3<Integer, Integer, Long> tuple : obj.getTiles(Z_INDEX)) {
 			tileIndex.remove(tuple);
 		}
-
+		db.commit();
 	}
 
 	public SpatialDataItem getById(Long id) {
