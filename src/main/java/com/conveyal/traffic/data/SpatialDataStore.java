@@ -106,8 +106,19 @@ public class SpatialDataStore {
 	public SpatialDataItem getById(Long id) {
 		return map.get(id); 
 	}
-	
+
 	public List<SpatialDataItem> getByEnvelope(Envelope env) {
+
+		List<Long> ids = getIdsByEnvelope(env);
+		List<SpatialDataItem> items = new ArrayList<>();
+		for (long id : ids) {
+			items.add(map.get(id));
+		}
+
+		return items;
+	}
+
+	public List<Long> getIdsByEnvelope(Envelope env) {
 
 		int y1 = getTileY(env.getMinY(), Z_INDEX);
 		int x1 = getTileX(env.getMinX(), Z_INDEX);
@@ -141,7 +152,7 @@ public class SpatialDataStore {
 		minY--;
 		maxY++;
 
-		List<SpatialDataItem> items = new ArrayList();
+		List<Long> ids = new ArrayList();
 
 		for(int tileX = minX; tileX <= maxX; tileX++) {
 			NavigableSet<Tuple3<Integer, Integer, Long>> xSubset = tileIndex.subSet(
@@ -150,11 +161,11 @@ public class SpatialDataStore {
 			);
 
 			for (Tuple3<Integer, Integer, Long> item : xSubset) {
-				items.add(map.get(item.c));
+				ids.add(item.c);
 			}
 		}
 
-		return items;
+		return ids;
 	}
 	
 	public Collection<SpatialDataItem> getAll() {

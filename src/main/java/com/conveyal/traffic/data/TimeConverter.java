@@ -32,105 +32,108 @@ public class TimeConverter {
     STRtree timePolyIndex;
     STRtree timeZoneIndex;
 
-    public TimeConverter() {
+    public TimeConverter(boolean enableTimeZoneConversion) {
         File directory = new File(System.getProperty("java.io.tmpdir"), "traffic-engine-tz-data");
         File shapeDir = new File(directory, "world");
         File shapeFile = new File(shapeDir, "tz_world.shp");
 
-       /*if(!shapeFile.exists()) {
-            try {
-                shapeDir.mkdirs();
+        if(enableTimeZoneConversion) {
+            if(!shapeFile.exists()) {
+                try {
+                    shapeDir.mkdirs();
 
-                log.log(Level.INFO, "Downloading tz_world.zip...");
-                // grab tz_world.zip from netowkr
-                File shapeZipFile = new File(shapeDir,"tz_world.zip");
-                FileUtils.copyURLToFile(new URL("http://efele.net/maps/tz/world/tz_world.zip"), shapeZipFile);
+                    log.log(Level.INFO, "Downloading tz_world.zip...");
+                    // grab tz_world.zip from netowkr
+                    File shapeZipFile = new File(shapeDir,"tz_world.zip");
+                    FileUtils.copyURLToFile(new URL("http://efele.net/maps/tz/world/tz_world.zip"), shapeZipFile);
 
-                log.log(Level.INFO, "Unpacking tz_world.zip...");
-                // unpack tz_world.zip into cache directory
-                ZipFile zipFile = new ZipFile(shapeZipFile);
-                Enumeration<?> enu = zipFile.entries();
-                while (enu.hasMoreElements()) {
-                    ZipEntry zipEntry = (ZipEntry) enu.nextElement();
+                    log.log(Level.INFO, "Unpacking tz_world.zip...");
+                    // unpack tz_world.zip into cache directory
+                    ZipFile zipFile = new ZipFile(shapeZipFile);
+                    Enumeration<?> enu = zipFile.entries();
+                    while (enu.hasMoreElements()) {
+                        ZipEntry zipEntry = (ZipEntry) enu.nextElement();
 
-                    String name = zipEntry.getName();
+                        String name = zipEntry.getName();
 
-                    // Do we need to create a directory ?
-                    File file = new File(directory, name);
+                        // Do we need to create a directory ?
+                        File file = new File(directory, name);
 
-                    // Extract the file
-                    InputStream is = zipFile.getInputStream(zipEntry);
-                    FileOutputStream fos = new FileOutputStream(file);
-                    byte[] bytes = new byte[1024];
-                    int length;
-                    while ((length = is.read(bytes)) >= 0) {
-                        fos.write(bytes, 0, length);
+                        // Extract the file
+                        InputStream is = zipFile.getInputStream(zipEntry);
+                        FileOutputStream fos = new FileOutputStream(file);
+                        byte[] bytes = new byte[1024];
+                        int length;
+                        while ((length = is.read(bytes)) >= 0) {
+                            fos.write(bytes, 0, length);
+                        }
+                        is.close();
+                        fos.close();
                     }
-                    is.close();
-                    fos.close();
+                    zipFile.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
                 }
-                zipFile.close();
+            }
+
+            try {
+
+                log.log(Level.INFO, "Loading and parsing tz_world.shp data...");
+                FileDataStore store = FileDataStoreFinder.getDataStore(shapeFile);
+                FeatureSource<SimpleFeatureType, SimpleFeature> source = store.getFeatureSource();
+                Filter filter = Filter.INCLUDE;
+
+                FeatureCollection<SimpleFeatureType, SimpleFeature> collection = source.getFeatures(filter);
+
+                timePolyIndex = new STRtree(collection.size());
+                timeZoneIndex = new STRtree(600);
+
+                Map<String,Envelope> timeZoneEnvs = new HashMap<String,Envelope>();
+
+                int shapeCount = 0;
+                try (FeatureIterator<SimpleFeature> features = collection.features()) {
+                    while (features.hasNext()) {
+                        SimpleFeature feature = features.next();
+                        MultiPolygon geometry = (MultiPolygon)feature.getDefaultGeometry();
+
+                        TimeZoneData timeZoneData = new TimeZoneData();
+                        timeZoneData.tzID = (String)feature.getAttribute("TZID");
+
+                        // skip "uninhabited" shapes
+                        if(timeZoneData.tzID.equals("uninhabited"))
+                            continue;
+
+                        Polygon  tzGeom = (Polygon)geometry.getGeometryN(0);
+                        timeZoneData.pointLocator = new IndexedPointInAreaLocator(tzGeom);
+                        timeZoneData.bufferedPointLocator = new IndexedPointInAreaLocator(tzGeom.buffer(0.25));
+
+                        timePolyIndex.insert(tzGeom.getEnvelopeInternal(), timeZoneData);
+
+                        if(!timeZoneEnvs.containsKey(timeZoneData.tzID))
+                            timeZoneEnvs.put(timeZoneData.tzID, new Envelope());
+
+                        timeZoneEnvs.get(timeZoneData.tzID).expandToInclude(tzGeom.getEnvelopeInternal());
+
+                        shapeCount++;
+                    }
+                }
+
+                for (String tzID : timeZoneEnvs.keySet()) {
+                    timeZoneIndex.insert(timeZoneEnvs.get(tzID), tzID);
+                }
+
+                log.log(Level.INFO, "Loaded " + shapeCount + " timezone shapes." );
+
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
-
-        try {
-
-            log.log(Level.INFO, "Loading and parsing tz_world.shp data...");
-            FileDataStore store = FileDataStoreFinder.getDataStore(shapeFile);
-            FeatureSource<SimpleFeatureType, SimpleFeature> source = store.getFeatureSource();
-            Filter filter = Filter.INCLUDE;
-
-            FeatureCollection<SimpleFeatureType, SimpleFeature> collection = source.getFeatures(filter);
-
-            timePolyIndex = new STRtree(collection.size());
+        else {
+            // disable timezone converter
+            timePolyIndex = new STRtree(100);
             timeZoneIndex = new STRtree(600);
+        }
 
-            Map<String,Envelope> timeZoneEnvs = new HashMap<String,Envelope>();
-
-            int shapeCount = 0;
-            try (FeatureIterator<SimpleFeature> features = collection.features()) {
-                while (features.hasNext()) {
-                    SimpleFeature feature = features.next();
-                    MultiPolygon geometry = (MultiPolygon)feature.getDefaultGeometry();
-
-                    TimeZoneData timeZoneData = new TimeZoneData();
-                    timeZoneData.tzID = (String)feature.getAttribute("TZID");
-
-                    // skip "uninhabited" shapes
-                    if(timeZoneData.tzID.equals("uninhabited"))
-                        continue;
-
-                    Polygon  tzGeom = (Polygon)geometry.getGeometryN(0);
-                    timeZoneData.pointLocator = new IndexedPointInAreaLocator(tzGeom);
-                    timeZoneData.bufferedPointLocator = new IndexedPointInAreaLocator(tzGeom.buffer(0.25));
-
-                    timePolyIndex.insert(tzGeom.getEnvelopeInternal(), timeZoneData);
-
-                    if(!timeZoneEnvs.containsKey(timeZoneData.tzID))
-                        timeZoneEnvs.put(timeZoneData.tzID, new Envelope());
-
-                    timeZoneEnvs.get(timeZoneData.tzID).expandToInclude(tzGeom.getEnvelopeInternal());
-
-                    shapeCount++;
-                }
-            }
-
-            for (String tzID : timeZoneEnvs.keySet()) {
-                timeZoneIndex.insert(timeZoneEnvs.get(tzID), tzID);
-            }
-
-            log.log(Level.INFO, "Loaded " + shapeCount + " timezone shapes." );
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        }*/
-
-
-        // disable timezone converter
-        timePolyIndex = new STRtree(100);
-        timeZoneIndex = new STRtree(600);
 
         // init SRTree
         timePolyIndex.query(new Envelope(new Coordinate(1,1)));

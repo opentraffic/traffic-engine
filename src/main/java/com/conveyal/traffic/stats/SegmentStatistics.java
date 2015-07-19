@@ -4,6 +4,8 @@ import java.io.Serializable;
 import java.time.*;
 import java.time.temporal.ChronoField;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
+import java.util.Set;
 
 
 public class SegmentStatistics implements Serializable {
@@ -20,21 +22,29 @@ public class SegmentStatistics implements Serializable {
 	public double hourSampleSum[] = new double[HOURS_IN_WEEK];
 
 	public void addSample(SpeedSample ss) {
-		int hour = getHourOfWeek(ss.time);
-		sampleCount++;
-		sampleSum += ss.getSpeed();
+		synchronized (this) {
+			int hour = getHourOfWeek(ss.time);
+			sampleCount++;
+			sampleSum += ss.getSpeed();
 
-		hourSampleCount[hour]++;
-		hourSampleSum[hour] += ss.getSpeed();
+			hourSampleCount[hour]++;
+			hourSampleSum[hour] += ss.getSpeed();
+		}
 	}
 
 	public void addStats(SegmentStatistics stats) {
-		this.sampleCount += stats.sampleCount;
-		this.sampleSum += stats.sampleSum;
+		synchronized (this) {
 
-		for(int i = 0; i < HOURS_IN_WEEK; i++) {
-			hourSampleCount[i] += stats.hourSampleCount[i];
-			hourSampleSum[i] += stats.hourSampleSum[i];
+			if(stats == null)
+				return;
+
+			this.sampleCount += stats.sampleCount;
+			this.sampleSum += stats.sampleSum;
+
+			for (int i = 0; i < HOURS_IN_WEEK; i++) {
+				hourSampleCount[i] += stats.hourSampleCount[i];
+				hourSampleSum[i] += stats.hourSampleSum[i];
+			}
 		}
 	}
 
@@ -43,26 +53,39 @@ public class SegmentStatistics implements Serializable {
 		this.sampleSum += stats.sampleSum / stats.sampleCount;
 
 		for(int i = 0; i < HOURS_IN_WEEK; i++) {
-			if(stats.hourSampleCount[i] > 0) {
+			if(stats.hourSampleCount[i] > 5) {
 				hourSampleCount[i]++;
 				hourSampleSum[i] += stats.hourSampleSum[i] / stats.hourSampleCount[i];
 			}
 		}
 	}
 
-	public SummaryStatistics collectSummaryStatisics() {
+	public void avgPercentChangeStats(SegmentStatistics stats1, SegmentStatistics stats2) {
+		this.sampleCount++;
+		this.sampleSum += ((stats2.sampleSum / stats2.sampleCount) - (stats1.sampleSum / stats1.sampleCount)) / (stats1.sampleSum / stats1.sampleCount);
 
+		for(int i = 0; i < HOURS_IN_WEEK; i++) {
+			if(stats1.hourSampleCount[i] > 5 && stats2.hourSampleCount[i] > 5) {
+				hourSampleCount[i]++;
+				hourSampleSum[i] += ((stats2.hourSampleSum[i] / stats2.hourSampleCount[i]) - (stats1.hourSampleSum[i] / stats1.hourSampleCount[i])) / (stats1.hourSampleSum[i] / stats1.hourSampleCount[i]);
+			}
+		}
+	}
+
+	public SummaryStatistics collectSummaryStatisics(Set<Integer> hours) {
 		synchronized (this) {
-
-			long countByHourOfWeek[] = new long[HOURS_IN_WEEK];
-			double speedSumByHourOfWeek[] = new double[HOURS_IN_WEEK];
-
 			SummaryStatistics summary = new SummaryStatistics();
 
-			summary.averageCount = this.sampleCount;
-			summary.averageSpeedSum = this.sampleSum;
+			summary.averageCount = 0l;
+			summary.averageSpeedSum = 0.0;
 
 			for(int i = 0; i < HOURS_IN_WEEK; i++) {
+				if(hours != null && hours.size() > 0 && !hours.contains(i))
+					continue;
+
+				summary.averageCount += hourSampleCount[i];
+				summary.averageSpeedSum += hourSampleSum[i];
+
 				if(hourSampleCount[i] > 0)
 					summary.speedByHourOfWeek[i] = hourSampleSum[i] / hourSampleCount[i];
 				else

@@ -14,6 +14,7 @@ import java.util.Map.Entry;
 public class StreetDataStore extends SpatialDataStore {
 
 	public Map<Tuple3<Long, Long, Long>, Long> segmentIndex;
+	public Map<Long, Integer> segmentTypeMap;
 
 	public StreetDataStore(File directory, String dataFile, Serializer serializer, Integer cacheSize) {
 		super(directory, dataFile, serializer, cacheSize);
@@ -24,6 +25,12 @@ public class StreetDataStore extends SpatialDataStore {
 				.keySerializer(BTreeKeySerializer.TUPLE3);
 
 		segmentIndex = idMapMaker.makeOrGet();
+
+		BTreeMapMaker segmentTypeMapMaker = db.createTreeMap(dataFile + "_segmentTypeIndex")
+				.valueSerializer(Serializer.INTEGER)
+				.keySerializer(BTreeKeySerializer.ZERO_OR_POSITIVE_LONG);
+
+		segmentTypeMap = segmentTypeMapMaker.makeOrGet();
 	}
 	
 	public void save(SpatialDataItem obj) {
@@ -35,6 +42,15 @@ public class StreetDataStore extends SpatialDataStore {
 
 		super.save(obj);
 
+	}
+
+	public int getSegmentTypeById(long id) {
+		if(!segmentTypeMap.containsKey(id)) {
+			StreetSegment segment = (StreetSegment)map.get(id);
+			segmentTypeMap.put(id, segment.streetType);
+		}
+
+		return segmentTypeMap.get(id);
 	}
 
 	@Override

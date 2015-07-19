@@ -10,7 +10,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import com.conveyal.osmlib.Node;
-import com.conveyal.traffic.TrafficEngine;
 import com.conveyal.traffic.data.*;
 import com.conveyal.traffic.data.seralizers.OffMapTraceSerializer;
 import com.conveyal.traffic.data.seralizers.StreetSegmentSerializer;
@@ -18,7 +17,12 @@ import com.conveyal.traffic.data.seralizers.TripLineSerializer;
 import com.conveyal.traffic.geom.Jumper;
 import com.conveyal.traffic.geom.OffMapTrace;
 import com.conveyal.traffic.stats.SegmentStatistics;
+import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.google.common.io.ByteStreams;
+import com.vividsolutions.jts.geom.*;
+import com.vividsolutions.jts.operation.buffer.BufferParameters;
+import com.vividsolutions.jts.operation.buffer.OffsetCurveBuilder;
 import org.geotools.referencing.GeodeticCalculator;
 
 import com.conveyal.osmlib.OSM;
@@ -27,11 +31,6 @@ import com.conveyal.traffic.geom.StreetSegment;
 import com.conveyal.traffic.geom.TripLine;
 import com.conveyal.traffic.stats.SummaryStatistics;
 import com.conveyal.traffic.stats.SpeedSample;
-import com.vividsolutions.jts.geom.Coordinate;
-import com.vividsolutions.jts.geom.Envelope;
-import com.vividsolutions.jts.geom.GeometryFactory;
-import com.vividsolutions.jts.geom.LineString;
-import com.vividsolutions.jts.geom.Point;
 import com.vividsolutions.jts.linearref.LengthIndexedLine;
 import org.mapdb.DB;
 import org.mapdb.DBMaker;
@@ -68,15 +67,24 @@ public class OSMDataStore {
 	DB db;
 	public Map<Fun.Tuple2<Integer, Integer>, OSMArea> osmAreas;
 
+	static OffsetCurveBuilder ocb = new OffsetCurveBuilder(new PrecisionModel(), new BufferParameters());
+	static GeometryFactory geometryFactory = new GeometryFactory();
+
+	private LoadingCache<Long, Geometry> geometryCache;
 
 	private File osmPath;
 	private File dataPath;
 	private String osmServer;
 
-	public OSMDataStore(File dataPath, File osmPath, String osmServer, Integer cacheSize) {
+	private TimeConverter timeZoneConverter;
 
+	public OSMDataStore(File dataPath, File osmPath, String osmServer, Integer cacheSize, TimeConverter timeZoneConverter) {
 
 		log.log(Level.INFO, "Initializing OSM Data Store");
+
+		geometryCache = Caffeine.newBuilder().maximumSize(100_000).build(id -> createOffsetGeom(id));
+
+		this.timeZoneConverter = timeZoneConverter;
 
 		this.osmPath = osmPath;
 		this.dataPath = dataPath;
@@ -103,6 +111,22 @@ public class OSMDataStore {
 		log.log(Level.INFO, "streetSegments: " + streetSegments.size());
 		log.log(Level.INFO, "triplines: " + triplines.size());
 		log.log(Level.INFO, "statsDataStore: " + statsDataStore.size());
+
+
+	}
+
+	private Geometry createOffsetGeom(long id) {
+		SpatialDataItem segment = streetSegments.getById(id);
+		Geometry geom = streetSegments.getById(id).getGeometry();
+		if(!((StreetSegment)segment).oneway) {
+			Coordinate[] offsetCoords = ocb.getOffsetCurve(geom.getCoordinates(), -0.000025);
+			geom = geometryFactory.createLineString(offsetCoords);
+		}
+		return geom;
+	}
+
+	public Geometry getGeometryById(long id) {
+		return geometryCache.get(id);
 	}
 
 	public boolean isLoadingOSM() {
@@ -288,7 +312,7 @@ public class OSMDataStore {
 
 		triplines.save(triplineItems);
 
-		long zoneOffset = TrafficEngine.timeConverter.getOffsetForCoord(env.centre());
+		long zoneOffset =  timeZoneConverter.getOffsetForCoord(env.centre());
 
 		OSMArea osmArea = new OSMArea(tile.a, tile.b, Z_INDEX, placeName, placePop, zoneOffset, env);
 
@@ -301,7 +325,11 @@ public class OSMDataStore {
 
 		return osmArea;
 	}
-	
+
+	public List<Long> getStreetSegmentIds(Envelope env) {
+		return streetSegments.getIdsByEnvelope(env);
+	}
+
 	public List<SpatialDataItem> getStreetSegments(Envelope env) {
 		return streetSegments.getByEnvelope(env);
 	}
@@ -313,8 +341,41 @@ public class OSMDataStore {
 	public List<SpatialDataItem> getTripLines(Envelope env) {
 		return triplines.getByEnvelope(env);
 	}
-	
-	
+
+	public void collectStatistcs(FileOutputStream os, Envelope env) throws IOException {
+
+		ExchangeFormat.BaselineTile.Builder tile = ExchangeFormat.BaselineTile.newBuilder();
+
+		tile.setHeader(ExchangeFormat.Header.newBuilder()
+				.setCreationTimestamp(System.currentTimeMillis())
+				.setOsmCommitId(1)
+				.setTileX(1)
+				.setTileY(1)
+				.setTileZ(1));
+
+		for(SpatialDataItem sdi : getStreetSegments(env)) {
+			StreetSegment streetSegment = (StreetSegment)sdi;
+
+			SummaryStatistics baseline = statsDataStore.collectSummaryStatistics(sdi.id, null, null);
+
+			// skip segments without data
+			if(Double.isNaN(baseline.getAverageSpeedMS()))
+				continue;
+
+			tile.addSegments(ExchangeFormat.BaselineStats.newBuilder()
+					.setSegment(ExchangeFormat.SegmentDefinition.newBuilder()
+							.setWayId(streetSegment.wayId)
+							.setStartNodeId(streetSegment.startNodeId)
+							.setEndNodeId(streetSegment.endNodeId))
+					.setAverageSpeed((float)baseline.getAverageSpeedKMH())
+					.addAllHourOfWeekAverages(baseline.getAllHourlySpeedsKMHFloatAL()));
+		}
+
+		os.write(tile.build().toByteArray());
+		os.flush();
+	}
+
+
 	/**
 	 * Returns the id of every node encountered in an OSM dataset more than once.
 	 * @param osm
@@ -526,12 +587,13 @@ public class OSMDataStore {
 		statsDataStore.addSpeedSample(speedSample);
 	}
 
-	public SummaryStatistics collectSummaryStatisics(Long segmentId, Integer week) {
-		return statsDataStore.collectSummaryStatisics(segmentId, week);
+	public SummaryStatistics collectSummaryStatistics(Long segmentId, Set<Integer> hours, Set<Integer> weeks) {
+		return statsDataStore.collectSummaryStatistics(segmentId, hours, weeks);
 	}
 
-	public SegmentStatistics getSegmentStatisics(Long segmentId) {
-		return statsDataStore.getSegmentStatisics(segmentId);
+
+	public SegmentStatistics getSegmentStatistics(Long segmentId, List<Integer> weeks) {
+		return statsDataStore.getSegmentStatisics(segmentId, weeks);
 	}
 
 }

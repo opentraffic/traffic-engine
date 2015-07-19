@@ -111,6 +111,8 @@ public class StatsDataStore {
 		};
 
 		executor.execute(statsCollector);
+
+		checkIntegrity();
 	}
 
 	public String getStatistics() {
@@ -166,39 +168,45 @@ public class StatsDataStore {
 		return list;
 	}
 
+	public boolean weekExists(long week){
+		return weekHourMap.keySet().contains(week);
+	}
+
 	public void addSpeedSample(SpeedSample speedSample) {
 		sampleQueue.add(speedSample);
 	}
 
 	public void save(long time, long segmentId, int segmentType, SegmentStatistics segmentStats) {
 
-		long week = SegmentStatistics.getWeekSinceEpoch(time);
+		synchronized (this) {
+			long week = SegmentStatistics.getWeekSinceEpoch(time);
 
-		Map<Long,TypeStatistics> typeData = getTypeMap(week);
+			Map<Long, TypeStatistics> typeData = getTypeMap(week);
 
-		Map<Long,SegmentStatistics> hourData = getWeekMap(week);
+			Map<Long, SegmentStatistics> hourData = getWeekMap(week);
 
-		if(hourData.containsKey(segmentId))
-			hourData.get(segmentId).addStats(segmentStats);
-		else
-			hourData.put(segmentId, segmentStats);
+			if (hourData.containsKey(segmentId))
+				hourData.get(segmentId).addStats(segmentStats);
+			else
+				hourData.put(segmentId, segmentStats);
 
 
-		SegmentStatistics segmentStatistics;
-		if(cumulativeHourMap.containsKey(segmentId))
-			segmentStatistics = cumulativeHourMap.get(segmentId);
-		else
-			segmentStatistics = new SegmentStatistics();
+			SegmentStatistics segmentStatistics;
+			if (cumulativeHourMap.containsKey(segmentId))
+				segmentStatistics = cumulativeHourMap.get(segmentId);
+			else
+				segmentStatistics = new SegmentStatistics();
 
-		segmentStatistics.addStats(segmentStats);
+			segmentStatistics.addStats(segmentStats);
 
-		cumulativeHourMap.put(segmentId, segmentStatistics);
-
+			cumulativeHourMap.put(segmentId, segmentStatistics);
+		}
 	}
 
 	public void save(SpeedSample speedSample) {
 
-		long week = SegmentStatistics.getWeekSinceEpoch(speedSample.getTime());
+		synchronized (this) {
+			long week = SegmentStatistics.getWeekSinceEpoch(speedSample.getTime());
 
 		/*Map<Long,TypeStatistics> typeData = getTypeMap(week);
 
@@ -210,46 +218,103 @@ public class StatsDataStore {
 			typeData.put(speedSample.getSegmentTileId(), typeStatistics);
 		}*/
 
-		Map<Long,SegmentStatistics> hourData = getWeekMap(week);
+			Map<Long,SegmentStatistics> hourData = getWeekMap(week);
 
-		if(hourData.containsKey(speedSample.getSegmentId()))
-			hourData.get(speedSample.getSegmentId()).addSample(speedSample);
-		else {
-			SegmentStatistics segmentStatistics = new SegmentStatistics();
+			if(hourData.containsKey(speedSample.getSegmentId())) {
+				SegmentStatistics segmentStatistics = hourData.get(speedSample.getSegmentId());
+				segmentStatistics.addSample(speedSample);
+				hourData.put(speedSample.getSegmentId(), segmentStatistics);
+			}
+			else {
+				SegmentStatistics segmentStatistics = new SegmentStatistics();
+				segmentStatistics.addSample(speedSample);
+				hourData.put(speedSample.getSegmentId(), segmentStatistics);
+			}
+
+			SegmentStatistics segmentStatistics;
+			if(cumulativeHourMap.containsKey(speedSample.getSegmentId()))
+				segmentStatistics = cumulativeHourMap.get(speedSample.getSegmentId());
+			else
+				segmentStatistics = new SegmentStatistics();
+
 			segmentStatistics.addSample(speedSample);
-			hourData.put(speedSample.getSegmentId(), segmentStatistics);
+
+			cumulativeHourMap.put(speedSample.getSegmentId(), segmentStatistics);
+
 		}
-
-		SegmentStatistics segmentStatistics;
-		if(cumulativeHourMap.containsKey(speedSample.getSegmentId()))
-			segmentStatistics = cumulativeHourMap.get(speedSample.getSegmentId());
-		else
-			segmentStatistics = new SegmentStatistics();
-
-		segmentStatistics.addSample(speedSample);
-
-		cumulativeHourMap.put(speedSample.getSegmentId(), segmentStatistics);
-
 	}
 
-	public SummaryStatistics collectSummaryStatisics(Long segmentId, Integer week) {
+	public SummaryStatistics collectSummaryStatistics(Long segmentId, Set<Integer>hours, Set<Integer> weeks) {
 
 		SummaryStatistics summaryStatistics = new SummaryStatistics();
 
-		if(week != null) {
-			Map<Long,SegmentStatistics> hourData = getWeekMap(week);
+		if(weeks != null && weeks.size() > 0) {
 
-			if(hourData.containsKey(segmentId))
-				summaryStatistics = hourData.get(segmentId).collectSummaryStatisics();
+			SegmentStatistics segmentStatistics = new SegmentStatistics();
+
+			for(long week : weeks) {
+				if(weekExists(week)) {
+					Map<Long, SegmentStatistics> hourData = getWeekMap(week);
+					if (hourData.containsKey(segmentId))
+						segmentStatistics.addStats(hourData.get(segmentId));
+				}
+			}
+
+			summaryStatistics = segmentStatistics.collectSummaryStatisics(hours);
 		}
 		else if(cumulativeHourMap.containsKey(segmentId))
-			summaryStatistics = cumulativeHourMap.get(segmentId).collectSummaryStatisics();
+			summaryStatistics = cumulativeHourMap.get(segmentId).collectSummaryStatisics(hours);
 
 		return summaryStatistics;
 	}
 
-	public SegmentStatistics getSegmentStatisics(Long segmentId) {
-		return cumulativeHourMap.get(segmentId);
+	public void checkIntegrity() {
+
+
+		for(Long segmentId : cumulativeHourMap.keySet()) {
+			SegmentStatistics segmentStatistics = cumulativeHourMap.get(segmentId);
+
+			long totalByHourCount = 0;
+			for(long count : segmentStatistics.hourSampleCount) {
+				totalByHourCount += count;
+			}
+
+			if(totalByHourCount < segmentStatistics.sampleCount / 2 )
+				System.out.println("Segment " + segmentId + " total by hour " + totalByHourCount + " less than total observed " +  segmentStatistics.sampleCount);
+
+			long totalByHourByWeekCount = 0;
+
+			for(long week : getWeekList()) {
+
+				Map<Long,SegmentStatistics> hourData = getWeekMap(week);
+
+				if(hourData.containsKey(segmentId)) {
+
+					SegmentStatistics byWeekStatistics = hourData.get(segmentId);
+					for (long count : byWeekStatistics.hourSampleCount) {
+						totalByHourByWeekCount += count;
+					}
+				}
+			}
+
+			if(totalByHourByWeekCount < segmentStatistics.sampleCount / 2)
+				System.out.println("Segment " + segmentId + " total by hour by week " + totalByHourByWeekCount + " less than total observed " +  segmentStatistics.sampleCount);
+
+		}
+	}
+
+	public SegmentStatistics getSegmentStatisics(Long segmentId, List<Integer> weeks) {
+		if(weeks == null || weeks.size() == 0)
+			return cumulativeHourMap.get(segmentId);
+		else {
+			SegmentStatistics segmentStatistics = new SegmentStatistics();
+
+			for(long week : weeks) {
+				segmentStatistics.addStats(getWeekMap(week).get(segmentId));
+			}
+			return segmentStatistics;
+		}
+
 	}
 
 	public Integer size() {

@@ -33,6 +33,11 @@ public class SummaryStatistics {
 		}
 	}
 
+
+	public long getTotalObservationCount() {
+		return this.averageCount;
+	}
+
 	public double getAverageSpeedKMH() {
 		
 		return getAverageSpeedMS() * MS_TO_KMH;

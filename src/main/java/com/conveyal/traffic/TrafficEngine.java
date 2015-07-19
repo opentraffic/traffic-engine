@@ -2,10 +2,7 @@ package com.conveyal.traffic;
 
 import java.io.File;
 import java.io.FileOutputStream;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.TimeZone;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
@@ -16,16 +13,18 @@ import com.conveyal.traffic.geom.Crossing;
 import com.conveyal.traffic.geom.GPSPoint;
 import com.conveyal.traffic.geom.GPSSegment;
 import com.conveyal.traffic.geom.TripLine;
+import com.conveyal.traffic.osm.OSMArea;
 import com.conveyal.traffic.osm.OSMDataStore;
 import com.conveyal.traffic.stats.SegmentStatistics;
 import com.conveyal.traffic.stats.SummaryStatistics;
 import com.conveyal.traffic.vehicles.VehicleStates;
 import com.vividsolutions.jts.geom.Envelope;
+import com.vividsolutions.jts.geom.Geometry;
 
 
 public class TrafficEngine {
 
-	public static TimeConverter timeConverter = new TimeConverter();
+	public TimeConverter timeConverter;
 
 	OSMDataStore osmData;
 
@@ -39,13 +38,16 @@ public class TrafficEngine {
 
 	public HashMap<Long,TrafficEngineWorker> workerMap = new HashMap<>();
 
-	public TrafficEngine(File dataPath, File osmPath, String osmServer, Integer cacheSize, Boolean debug){
+	public TrafficEngine(int workerCores, File dataPath, File osmPath, String osmServer, Integer cacheSize, Boolean enableTimeZoneConversion, Boolean debug){
+
+		timeConverter = new TimeConverter(enableTimeZoneConversion);
+
 		TimeZone.setDefault(TimeZone.getTimeZone("GMT"));
 
-		osmData = new OSMDataStore(dataPath, osmPath, osmServer, cacheSize);
+		osmData = new OSMDataStore(dataPath, osmPath, osmServer, cacheSize, timeConverter);
 		vehicleState = new VehicleStates(osmData, debug);
 
-		executor = Executors.newFixedThreadPool(5);
+		executor = Executors.newFixedThreadPool(workerCores);
 
 		for (int i = 0; i < 5; i++) {
 			TrafficEngineWorker worker = new TrafficEngineWorker(this);
@@ -56,8 +58,8 @@ public class TrafficEngine {
 		}
 	}
 
-	public TrafficEngine(File dataPath, File osmPath, String osmServer, Integer cacheSize){
-		this(dataPath,osmPath, osmServer, cacheSize, false);
+	public TrafficEngine(int workerCores, File dataPath, File osmPath, String osmServer, Integer cacheSize, boolean enableTimeZoneConversion){
+		this(workerCores, dataPath,osmPath, osmServer, cacheSize, enableTimeZoneConversion, false);
 	}
 
 	public void printCacheStatistics() {
@@ -90,6 +92,18 @@ public class TrafficEngine {
 		return osmData.getStreetSegments(env);
 	}
 
+	public List<Long> getStreetSegmentIds(Envelope env) {
+		return osmData.getStreetSegmentIds(env);
+	}
+
+	public Geometry getGeometryById(long id) {
+		return osmData.getGeometryById(id);
+	}
+
+	public int getStreetTypeById(long id) {
+		return osmData.streetSegments.getSegmentTypeById(id);
+	}
+
 	public List<SpatialDataItem> getOffMapTraces(Envelope env) {
 		return osmData.getOffMapTraces(env);
 	}
@@ -103,23 +117,23 @@ public class TrafficEngine {
 	}
 
 	
-	public SummaryStatistics collectSummaryStatisics(Long segmentId, Integer week){
-		return osmData.collectSummaryStatisics(segmentId, week);
+	public SummaryStatistics collectSummaryStatisics(Long segmentId, Set<Integer> hours, Set<Integer> weeks){
+		return osmData.collectSummaryStatistics(segmentId, hours, weeks);
 	}
 
 	public List<Long> getWeekList(){
 		return osmData.statsDataStore.getWeekList();
 	}
 
-	public SegmentStatistics getSegmentStatistics(Long segmentId){
-		return osmData.getSegmentStatisics(segmentId);
+	public SegmentStatistics getSegmentStatistics(Long segmentId, List<Integer> weeks){
+		return osmData.getSegmentStatistics(segmentId, weeks);
 	}
 	
 	public void writeStatistics(File statsFile, Envelope env) {
 		
 		try {
 			FileOutputStream fileOut = new FileOutputStream(statsFile);
-			//osmData.collectStatistcs(fileOut, env);
+			osmData.collectStatistcs(fileOut, env);
 			
 			fileOut.close();
 			
@@ -156,5 +170,10 @@ public class TrafficEngine {
 		List<Envelope> envelopes = osmData.osmAreas.values().stream().map(area -> area.env).collect(Collectors.toList());
 
 		return envelopes;
+	}
+
+	public List<OSMArea> getOsmAreas() {
+
+		return new ArrayList(osmData.osmAreas.values());
 	}
 }
