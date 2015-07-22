@@ -1,10 +1,11 @@
-package com.conveyal.traffic.data;
+package com.conveyal.traffic.data.stores;
 
 import java.io.File;
 import java.time.ZoneId;
 import java.util.*;
 import java.util.Map.Entry;
 
+import com.conveyal.traffic.data.SpatialDataItem;
 import org.mapdb.*;
 import org.mapdb.DB.BTreeMapMaker;
 import org.mapdb.Fun.Tuple3;

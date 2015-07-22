@@ -1,22 +1,12 @@
-package com.conveyal.traffic.data;
+package com.conveyal.traffic.data.stores;
 
 import com.conveyal.traffic.data.seralizers.JumperSerializer;
-import com.conveyal.traffic.data.seralizers.SegmentStatisticsSerializer;
-import com.conveyal.traffic.data.seralizers.TypeStatisticsSerializer;
 import com.conveyal.traffic.geom.Jumper;
-import com.conveyal.traffic.stats.SegmentStatistics;
-import com.conveyal.traffic.stats.SpeedSample;
-import com.conveyal.traffic.stats.SummaryStatistics;
-import com.conveyal.traffic.stats.TypeStatistics;
 import org.mapdb.*;
-import org.mapdb.DB.BTreeMapMaker;
 
 import java.io.File;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.logging.Logger;
 
 public class JumperDataStore {

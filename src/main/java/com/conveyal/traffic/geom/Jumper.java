@@ -2,7 +2,7 @@ package com.conveyal.traffic.geom;
 
 
 import com.conveyal.traffic.osm.OSMDataStore;
-import com.conveyal.traffic.stats.SpeedSample;
+import com.conveyal.traffic.data.SpeedSample;
 import org.mapdb.Fun;
 
 import java.util.ArrayList;

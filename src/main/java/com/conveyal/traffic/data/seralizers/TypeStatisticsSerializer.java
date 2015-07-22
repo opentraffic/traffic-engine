@@ -1,7 +1,7 @@
 package com.conveyal.traffic.data.seralizers;
 
-import com.conveyal.traffic.stats.SegmentStatistics;
-import com.conveyal.traffic.stats.TypeStatistics;
+import com.conveyal.traffic.data.stats.SegmentStatistics;
+import com.conveyal.traffic.data.stats.TypeStatistics;
 import org.mapdb.Serializer;
 
 import java.io.DataInput;

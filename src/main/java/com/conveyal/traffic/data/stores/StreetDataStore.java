@@ -1,14 +1,14 @@
-package com.conveyal.traffic.data;
+package com.conveyal.traffic.data.stores;
 
+import com.conveyal.traffic.data.SpatialDataItem;
+import com.conveyal.traffic.data.stores.SpatialDataStore;
 import com.conveyal.traffic.geom.StreetSegment;
-import com.vividsolutions.jts.geom.Envelope;
 import org.mapdb.*;
 import org.mapdb.DB.BTreeMapMaker;
 import org.mapdb.Fun.Tuple3;
 
 import java.io.File;
 import java.util.*;
-import java.util.Map.Entry;
 
 
 public class StreetDataStore extends SpatialDataStore {

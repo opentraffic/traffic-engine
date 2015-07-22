@@ -2,9 +2,9 @@ package com.conveyal.traffic.data;
 
 import java.io.Serializable;
 import java.util.List;
-import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 
+import com.conveyal.traffic.data.stores.SpatialDataStore;
 import com.conveyal.traffic.geom.GPSPoint;
 import com.vividsolutions.jts.geom.*;
 import org.mapdb.Fun;

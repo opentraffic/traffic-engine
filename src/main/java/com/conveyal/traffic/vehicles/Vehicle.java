@@ -1,7 +1,7 @@
 package com.conveyal.traffic.vehicles;
 
 import com.conveyal.traffic.geom.*;
-import com.conveyal.traffic.stats.SpeedSample;
+import com.conveyal.traffic.data.SpeedSample;
 import com.github.benmanes.caffeine.SingleConsumerQueue;
 import org.mapdb.Fun;
 

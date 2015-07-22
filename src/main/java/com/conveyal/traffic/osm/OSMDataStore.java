@@ -14,9 +14,12 @@ import com.conveyal.traffic.data.*;
 import com.conveyal.traffic.data.seralizers.OffMapTraceSerializer;
 import com.conveyal.traffic.data.seralizers.StreetSegmentSerializer;
 import com.conveyal.traffic.data.seralizers.TripLineSerializer;
+import com.conveyal.traffic.data.stores.JumperDataStore;
+import com.conveyal.traffic.data.stores.SpatialDataStore;
+import com.conveyal.traffic.data.stores.StatsDataStore;
+import com.conveyal.traffic.data.stores.StreetDataStore;
 import com.conveyal.traffic.geom.Jumper;
 import com.conveyal.traffic.geom.OffMapTrace;
-import com.conveyal.traffic.stats.SegmentStatistics;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.google.common.io.ByteStreams;
@@ -29,8 +32,8 @@ import com.conveyal.osmlib.OSM;
 import com.conveyal.osmlib.Way;
 import com.conveyal.traffic.geom.StreetSegment;
 import com.conveyal.traffic.geom.TripLine;
-import com.conveyal.traffic.stats.SummaryStatistics;
-import com.conveyal.traffic.stats.SpeedSample;
+import com.conveyal.traffic.data.stats.SummaryStatistics;
+import com.conveyal.traffic.data.SpeedSample;
 import com.vividsolutions.jts.linearref.LengthIndexedLine;
 import org.mapdb.DB;
 import org.mapdb.DBMaker;
@@ -38,7 +41,7 @@ import org.mapdb.Fun;
 
 public class OSMDataStore {
 
-	public static int Z_INDEX = 11;
+	public final static int Z_INDEX = 11;
 
 	private static final Logger log = Logger.getLogger( OSMDataStore.class.getName());
 
@@ -111,8 +114,6 @@ public class OSMDataStore {
 		log.log(Level.INFO, "streetSegments: " + streetSegments.size());
 		log.log(Level.INFO, "triplines: " + triplines.size());
 		log.log(Level.INFO, "statsDataStore: " + statsDataStore.size());
-
-
 	}
 
 	private Geometry createOffsetGeom(long id) {
@@ -344,7 +345,7 @@ public class OSMDataStore {
 
 	public void collectStatistcs(FileOutputStream os, Envelope env) throws IOException {
 
-		ExchangeFormat.BaselineTile.Builder tile = ExchangeFormat.BaselineTile.newBuilder();
+		/*ExchangeFormat.BaselineTile.Builder tile = ExchangeFormat.BaselineTile.newBuilder();
 
 		tile.setHeader(ExchangeFormat.Header.newBuilder()
 				.setCreationTimestamp(System.currentTimeMillis())
@@ -372,7 +373,7 @@ public class OSMDataStore {
 		}
 
 		os.write(tile.build().toByteArray());
-		os.flush();
+		os.flush();*/
 	}
 
 
@@ -587,13 +588,16 @@ public class OSMDataStore {
 		statsDataStore.addSpeedSample(speedSample);
 	}
 
-	public SummaryStatistics collectSummaryStatistics(Long segmentId, Set<Integer> hours, Set<Integer> weeks) {
-		return statsDataStore.collectSummaryStatistics(segmentId, hours, weeks);
+	public SummaryStatistics getSummaryStatistics(Long segmentId, Set<Integer> weeks, Set<Integer> hours) {
+		return statsDataStore.collectSummaryStatistics(segmentId, weeks, hours);
 	}
 
+	public SummaryStatistics getSummaryStatistics(Set<Long> segmentIds, Set<Integer> weeks, Set<Integer> hours) {
+		return statsDataStore.collectSummaryStatistics(segmentIds, weeks, hours);
+	}
 
-	public SegmentStatistics getSegmentStatistics(Long segmentId, List<Integer> weeks) {
-		return statsDataStore.getSegmentStatisics(segmentId, weeks);
+	public SummaryStatistics getSummaryStatistics(Long segmentId, Integer week) {
+		return statsDataStore.getSegmentStatistics(segmentId, week);
 	}
 
 }

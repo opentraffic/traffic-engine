@@ -1,9 +1,8 @@
-package com.conveyal.traffic.stats;
+package com.conveyal.traffic.data.stats;
+
+import com.conveyal.traffic.data.SpeedSample;
 
 import java.io.Serializable;
-import java.time.*;
-import java.time.temporal.ChronoField;
-import java.time.temporal.ChronoUnit;
 
 public class TypeStatistics implements Serializable {
 

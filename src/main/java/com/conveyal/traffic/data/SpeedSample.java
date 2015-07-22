@@ -1,4 +1,4 @@
- package com.conveyal.traffic.stats;
+ package com.conveyal.traffic.data;
 
 import java.io.Serializable;
 

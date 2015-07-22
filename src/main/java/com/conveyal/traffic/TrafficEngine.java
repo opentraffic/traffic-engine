@@ -9,17 +9,14 @@ import java.util.stream.Collectors;
 
 import com.conveyal.traffic.data.SpatialDataItem;
 import com.conveyal.traffic.data.TimeConverter;
-import com.conveyal.traffic.geom.Crossing;
-import com.conveyal.traffic.geom.GPSPoint;
-import com.conveyal.traffic.geom.GPSSegment;
-import com.conveyal.traffic.geom.TripLine;
+import com.conveyal.traffic.geom.*;
 import com.conveyal.traffic.osm.OSMArea;
 import com.conveyal.traffic.osm.OSMDataStore;
-import com.conveyal.traffic.stats.SegmentStatistics;
-import com.conveyal.traffic.stats.SummaryStatistics;
+import com.conveyal.traffic.data.stats.SummaryStatistics;
 import com.conveyal.traffic.vehicles.VehicleStates;
 import com.vividsolutions.jts.geom.Envelope;
 import com.vividsolutions.jts.geom.Geometry;
+import org.mapdb.Fun;
 
 
 public class TrafficEngine {
@@ -112,23 +109,48 @@ public class TrafficEngine {
 		return osmData.getStreetSegmentById(segementId);
 	}
 
+	public List<SpatialDataItem> getStreetSegmentsBySegmentId(Fun.Tuple3<Long, Long, Long> segmentId) {
+		List<SpatialDataItem> edges = new ArrayList<>();
+
+		StreetSegment sdi = (StreetSegment)osmData.streetSegments.getBySegmentId(segmentId);
+		if(sdi == null) {
+			Jumper j = osmData.jumperDataStore.getJumper(segmentId.b, segmentId.c);
+			if (j != null) {
+				for (long id : j.segments) {
+					sdi = (StreetSegment) osmData.streetSegments.getById(id);
+					if (sdi != null)
+						edges.add(sdi);
+				}
+			}
+		}
+		else
+			edges.add(sdi);
+
+		return edges;
+	}
+
+
 	public void enqeueGPSPoint(GPSPoint gpsPoint) {
 		this.vehicleState.enqueueLocationUpdate(gpsPoint);
 	}
 
-	
-	public SummaryStatistics collectSummaryStatisics(Long segmentId, Set<Integer> hours, Set<Integer> weeks){
-		return osmData.collectSummaryStatistics(segmentId, hours, weeks);
-	}
 
-	public List<Long> getWeekList(){
+	public List<Integer> getWeekList(){
 		return osmData.statsDataStore.getWeekList();
 	}
 
-	public SegmentStatistics getSegmentStatistics(Long segmentId, List<Integer> weeks){
-		return osmData.getSegmentStatistics(segmentId, weeks);
+	public SummaryStatistics getSummaryStatistics(Long segmentId, Set<Integer> weeks, Set<Integer> hours){
+		return osmData.getSummaryStatistics(segmentId, weeks, hours);
 	}
-	
+
+	public SummaryStatistics getSummaryStatistics(Long segmentId, Integer week){
+		return osmData.getSummaryStatistics(segmentId, week);
+	}
+
+	public SummaryStatistics getSummaryStatistics(Set<Long> segmentIds, Set<Integer> weeks, Set<Integer> hours){
+		return osmData.getSummaryStatistics(segmentIds, weeks, hours);
+	}
+
 	public void writeStatistics(File statsFile, Envelope env) {
 		
 		try {

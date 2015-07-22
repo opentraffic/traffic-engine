@@ -2,7 +2,6 @@ package com.conveyal.traffic.vehicles;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Stream;
@@ -12,10 +11,6 @@ import com.conveyal.traffic.geom.GPSPoint;
 import com.conveyal.traffic.geom.GPSSegment;
 import com.conveyal.traffic.geom.TripLine;
 import com.conveyal.traffic.osm.OSMDataStore;
-import com.conveyal.traffic.stats.SpeedSample;
-import com.github.benmanes.caffeine.cache.Caffeine;
-import com.github.benmanes.caffeine.cache.LoadingCache;
-import com.github.benmanes.caffeine.cache.RemovalNotification;
 import org.mapdb.Fun;
 
 public class VehicleStates {

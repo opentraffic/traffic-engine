@@ -16,7 +16,7 @@ import org.mapdb.Fun;
 public class StreetSegment extends SpatialDataItem {
 
 	// osm way highway tag values for roadway types
-	static String[] primaryTypes = {"motorway","trunk","primary","motorway_link"};
+	static String[] primaryTypes = {"motorway","trunk","primary","primary_link","motorway_link"};
 	static String[] secondaryTypes = {"secondary"};
 	static String[] tertiaryTypes = {"tertiary"};
 	static String[] residentialTypes = {"residential"};

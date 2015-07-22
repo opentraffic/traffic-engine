@@ -1,8 +1,6 @@
 package com.conveyal.traffic.data.seralizers;
 
-import com.conveyal.traffic.data.SpatialDataItem;
 import com.conveyal.traffic.geom.StreetSegment;
-import com.conveyal.traffic.stats.SegmentStatistics;
 import com.vividsolutions.jts.geom.Coordinate;
 import org.mapdb.Serializer;
 

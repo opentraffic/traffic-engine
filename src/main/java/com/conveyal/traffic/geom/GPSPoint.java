@@ -1,10 +1,7 @@
 package com.conveyal.traffic.geom;
 
-import com.conveyal.traffic.data.SpatialDataItem;
-import com.conveyal.traffic.data.SpatialDataStore;
-import com.conveyal.traffic.data.TimeConverter;
+import com.conveyal.traffic.data.stores.SpatialDataStore;
 import com.conveyal.traffic.osm.OSMDataStore;
-import com.vividsolutions.jts.geom.Coordinate;
 import org.mapdb.Fun;
 
 import java.io.Serializable;
