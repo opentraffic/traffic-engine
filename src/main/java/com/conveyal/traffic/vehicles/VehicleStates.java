@@ -152,6 +152,15 @@ public class VehicleStates {
 	}
 
 	public void enqueueLocationUpdate(GPSPoint gpsPoint) {
+		while(queuedLocations.get() > 1_000_000) {
+
+			try {
+				Thread.sleep(1000);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		}
+
 		queuedLocations.incrementAndGet();
 		getVehicle(gpsPoint.vehicleId, true).enqueueLocation(gpsPoint);
 	}

@@ -1,6 +1,7 @@
 package com.conveyal.traffic.data.seralizers;
 
 import com.carrotsearch.hppc.cursors.ShortIntCursor;
+import com.carrotsearch.hppc.cursors.ShortLongCursor;
 import com.conveyal.traffic.data.stats.SegmentStatistics;
 import org.mapdb.Serializer;
 
@@ -47,9 +48,9 @@ public class SegmentStatisticsSerializer implements Serializer<SegmentStatistics
 
 
         out.writeShort(stats.hourSpeedMap.size());
-        for(ShortIntCursor cursor : stats.hourSpeedMap) {
+        for(ShortLongCursor cursor : stats.hourSpeedMap) {
             out.writeShort(cursor.key);
-            out.writeInt(cursor.value);
+            out.writeInt((int)cursor.value);
         }
     }
 

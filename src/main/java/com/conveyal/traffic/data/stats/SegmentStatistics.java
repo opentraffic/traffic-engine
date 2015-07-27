@@ -2,6 +2,10 @@ package com.conveyal.traffic.data.stats;
 
 import com.carrotsearch.hppc.ShortIntHashMap;
 import com.carrotsearch.hppc.ShortIntMap;
+import com.carrotsearch.hppc.ShortLongHashMap;
+import com.carrotsearch.hppc.ShortLongMap;
+import com.carrotsearch.hppc.cursors.ShortIntCursor;
+import com.carrotsearch.hppc.cursors.ShortLongCursor;
 import com.conveyal.traffic.data.SpeedSample;
 import java.io.Serializable;
 import java.time.*;
@@ -20,7 +24,7 @@ public class SegmentStatistics implements Serializable {
 	public final static int NUM_SPEED_BINS = (int)Math.ceil(MAX_TRACKED_SPEED / SPEED_BIN_SIZE);
 
 	private int count;
-	public ShortIntMap hourSpeedMap = new ShortIntHashMap();
+	public ShortLongMap hourSpeedMap = new ShortLongHashMap();
 
 	public int getCount() {
 		return count;
@@ -49,6 +53,12 @@ public class SegmentStatistics implements Serializable {
 
 			// add a single observation
 			addSpeed(hour, speedBin, 1);
+	}
+
+	public void addStats(SegmentStatistics stats) {
+		for(ShortLongCursor cursor : stats.hourSpeedMap) {
+			hourSpeedMap.addTo(cursor.key, cursor.value);
+		}
 	}
 
 	public static  double getBinMean(int speedBin) {

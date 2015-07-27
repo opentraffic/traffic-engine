@@ -3,6 +3,9 @@ package com.conveyal.traffic.data.stats;
 import com.carrotsearch.hppc.*;
 import com.carrotsearch.hppc.cursors.ShortDoubleCursor;
 import com.carrotsearch.hppc.cursors.ShortIntCursor;
+import com.carrotsearch.hppc.cursors.ShortLongCursor;
+
+import java.util.Set;
 
 
 public class SummaryStatistics {
@@ -11,26 +14,40 @@ public class SummaryStatistics {
 	public double count;
 	public double sum;
 
+	public Double stdDevCache;
+	public IntDoubleMap hourStdDevCache;
+
 	public IntDoubleMap hourCount = new IntDoubleHashMap();
 	public IntDoubleMap hourSum = new IntDoubleHashMap();
 	public ShortDoubleMap hourSpeedMap = new ShortDoubleHashMap();
 
-	public SummaryStatistics(boolean normalize) {
+	Set<Integer> hours;
+
+	public SummaryStatistics(boolean normalize, Set<Integer> hours) {
 		this.normalize = normalize;
+		if(hours != null && hours.size() > 0)
+			this.hours = hours;
 	}
 
 	public void add(SegmentStatistics segmentStatistics) {
+		stdDevCache = null;
+		hourStdDevCache = null;
 
-		for(ShortIntCursor cursor : segmentStatistics.hourSpeedMap) {
+		for(ShortLongCursor cursor : segmentStatistics.hourSpeedMap) {
 			short bin = cursor.key;
-			int binCount = cursor.value;
+			int hour = SegmentStatistics.getHourFromBin(bin);
+
+			if(hours != null && !hours.contains(hour))
+				continue;
+
+			long binCount = cursor.value;
 
 			if(normalize)
 				hourSpeedMap.putOrAdd(bin, (double)binCount / (double)segmentStatistics.getCount(), (double)binCount / (double)segmentStatistics.getCount());
 			else
 				hourSpeedMap.putOrAdd(bin, (double)binCount, (double)binCount);
 
-			int hour = SegmentStatistics.getHourFromBin(bin);
+
 			int speedBin = SegmentStatistics.getSpeedBinFromBin(bin);
 			double speed = SegmentStatistics.getBinMean(speedBin);
 
@@ -60,6 +77,9 @@ public class SummaryStatistics {
 
 	public double getStdDev() {
 
+		if(stdDevCache != null)
+			return stdDevCache;
+
 		if(count == 0)
 			return Double.NaN;
 
@@ -81,10 +101,15 @@ public class SummaryStatistics {
 
 		double meanSquaredSum = squaredSum / count;
 
-		return Math.sqrt(meanSquaredSum);
+		stdDevCache =  Math.sqrt(meanSquaredSum);
+
+		return stdDevCache;
 	}
 
 	public double getStdDev(int hour) {
+
+		if(hourStdDevCache != null && hourStdDevCache.containsKey(hour))
+			return hourStdDevCache.get(hour);
 
 		if(hourCount.get(hour) == 0)
 			return Double.NaN;
@@ -119,6 +144,13 @@ public class SummaryStatistics {
 
 		double meanSquaredSum = squaredSum / hourCount.get(hour);
 
-		return Math.sqrt(meanSquaredSum);
+		if(hourStdDevCache == null)
+			hourStdDevCache = new IntDoubleHashMap();
+
+		double stdDev = Math.sqrt(meanSquaredSum);
+
+		hourStdDevCache.put(hour, stdDev);
+
+		return stdDev;
 	}
 }

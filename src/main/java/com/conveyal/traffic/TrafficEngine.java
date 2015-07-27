@@ -23,7 +23,7 @@ public class TrafficEngine {
 
 	public TimeConverter timeConverter;
 
-	OSMDataStore osmData;
+	public OSMDataStore osmData;
 
 	VehicleStates vehicleState;
 
@@ -134,22 +134,6 @@ public class TrafficEngine {
 		this.vehicleState.enqueueLocationUpdate(gpsPoint);
 	}
 
-
-	public List<Integer> getWeekList(){
-		return osmData.statsDataStore.getWeekList();
-	}
-
-	public SummaryStatistics getSummaryStatistics(Long segmentId, Set<Integer> weeks, Set<Integer> hours){
-		return osmData.getSummaryStatistics(segmentId, weeks, hours);
-	}
-
-	public SummaryStatistics getSummaryStatistics(Long segmentId, Integer week){
-		return osmData.getSummaryStatistics(segmentId, week);
-	}
-
-	public SummaryStatistics getSummaryStatistics(Set<Long> segmentIds, Set<Integer> weeks, Set<Integer> hours){
-		return osmData.getSummaryStatistics(segmentIds, weeks, hours);
-	}
 
 	public void writeStatistics(File statsFile, Envelope env) {
 		

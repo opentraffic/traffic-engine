@@ -32,7 +32,6 @@ import com.conveyal.osmlib.OSM;
 import com.conveyal.osmlib.Way;
 import com.conveyal.traffic.geom.StreetSegment;
 import com.conveyal.traffic.geom.TripLine;
-import com.conveyal.traffic.data.stats.SummaryStatistics;
 import com.conveyal.traffic.data.SpeedSample;
 import com.vividsolutions.jts.linearref.LengthIndexedLine;
 import org.mapdb.DB;
@@ -173,7 +172,7 @@ public class OSMDataStore {
 			if (!vexUrl.endsWith("/"))
 				vexUrl += "/";
 
-			vexUrl += String.format("?n=%s&s=%s&e=%s&w=%s", north, south, east, west);
+			vexUrl += String.format("%.6f,%.6f,%.6f,%.6f.pbf", south, west, north, east);
 
 			HttpURLConnection conn;
 
@@ -588,16 +587,5 @@ public class OSMDataStore {
 		statsDataStore.addSpeedSample(speedSample);
 	}
 
-	public SummaryStatistics getSummaryStatistics(Long segmentId, Set<Integer> weeks, Set<Integer> hours) {
-		return statsDataStore.collectSummaryStatistics(segmentId, weeks, hours);
-	}
-
-	public SummaryStatistics getSummaryStatistics(Set<Long> segmentIds, Set<Integer> weeks, Set<Integer> hours) {
-		return statsDataStore.collectSummaryStatistics(segmentIds, weeks, hours);
-	}
-
-	public SummaryStatistics getSummaryStatistics(Long segmentId, Integer week) {
-		return statsDataStore.getSegmentStatistics(segmentId, week);
-	}
 
 }

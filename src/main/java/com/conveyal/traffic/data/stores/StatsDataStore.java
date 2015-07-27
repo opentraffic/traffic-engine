@@ -4,6 +4,8 @@ import com.conveyal.traffic.data.SpeedSample;
 import com.conveyal.traffic.data.seralizers.SegmentStatisticsSerializer;
 import com.conveyal.traffic.data.stats.SegmentStatistics;
 import com.conveyal.traffic.data.stats.SummaryStatistics;
+import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.LoadingCache;
 import org.mapdb.*;
 import org.mapdb.DB.BTreeMapMaker;
 
@@ -12,6 +14,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Logger;
 
@@ -22,6 +25,8 @@ public class StatsDataStore {
 	DB db;
 
 	ExecutorService executor;
+
+	LoadingCache<Long, SegmentStatistics> cumulativeStats;
 
 	BTreeMap<Fun.Tuple2<Long, Integer>, SegmentStatistics> statsMap;
 	Set<Integer> weekSet;
@@ -38,10 +43,16 @@ public class StatsDataStore {
 		if(!directory.exists())
 			directory.mkdirs();
 
+		cumulativeStats = Caffeine
+				.newBuilder()
+				.maximumSize(100_000)
+				.refreshAfterWrite(60, TimeUnit.MINUTES)
+				.build(id -> loadSegmentStats(id));
+
 		DBMaker dbm = DBMaker.newFileDB(new File(directory, "stats.db"))
 				.mmapFileEnableIfSupported()
 				.cacheWeakRefEnable()
-				.cacheSize(100000)
+				.cacheSize(2_500_000)
 				.compressionEnable()
 				.asyncWriteEnable()
 				.asyncWriteFlushDelay(1000)
@@ -150,14 +161,20 @@ public class StatsDataStore {
 		}
 	}
 
-	public SummaryStatistics collectSummaryStatistics(Long segmentId, Set<Integer> weeks, Set<Integer>hours) {
-		SummaryStatistics summaryStatistics = new SummaryStatistics(true);
+	private SegmentStatistics loadSegmentStats(long id) {
+		SegmentStatistics cumulativeStats = new SegmentStatistics();
+
+		NavigableMap<Fun.Tuple2<Long, Integer>, SegmentStatistics> subMap = statsMap.subMap(new Fun.Tuple2(id, null), true, new Fun.Tuple2(id, Fun.HI), true);
+		subMap.values().forEach(cumulativeStats::addStats);
+
+		return cumulativeStats;
+	}
+
+	public SummaryStatistics collectSummaryStatistics(Long segmentId, Boolean normalize, Set<Integer> weeks, Set<Integer>hours) {
+		SummaryStatistics summaryStatistics = new SummaryStatistics(normalize, hours);
 
 		if(weeks == null || weeks.size() == 0) {
-			NavigableMap<Fun.Tuple2<Long, Integer>, SegmentStatistics> subMap = statsMap.subMap(new Fun.Tuple2(segmentId, null), true, new Fun.Tuple2(segmentId, Fun.HI), true);
-			for(SegmentStatistics stats : subMap.values()) {
-				summaryStatistics.add(stats);
-			}
+			summaryStatistics.add(cumulativeStats.get(segmentId));
 		}
 		else {
 			for(Integer week : weeks) {
@@ -172,15 +189,12 @@ public class StatsDataStore {
 		return summaryStatistics;
 	}
 
-	public SummaryStatistics collectSummaryStatistics(Set<Long> segmentIds, Set<Integer> weeks, Set<Integer>hours) {
-		SummaryStatistics summaryStatistics = new SummaryStatistics(true);
+	public SummaryStatistics collectSummaryStatistics(Set<Long> segmentIds, Boolean normalize, Set<Integer> weeks, Set<Integer>hours) {
+		SummaryStatistics summaryStatistics = new SummaryStatistics(normalize, hours);
 
 		for(Long segmentId : segmentIds) {
 			if(weeks == null || weeks.size() == 0) {
-				NavigableMap<Fun.Tuple2<Long, Integer>, SegmentStatistics> subMap = statsMap.subMap(new Fun.Tuple2(segmentId, null), true, new Fun.Tuple2(segmentId, Fun.HI), true);
-				for(SegmentStatistics stats : subMap.values()) {
-					summaryStatistics.add(stats);
-				}
+				summaryStatistics.add(cumulativeStats.get(segmentId));
 			}
 			else {
 				for(Integer week : weeks) {
@@ -195,17 +209,19 @@ public class StatsDataStore {
 		return summaryStatistics;
 	}
 
-	public SummaryStatistics getSegmentStatistics(Long segmentId, Integer week) {
-		SummaryStatistics summaryStatistics = new SummaryStatistics(true);
+	public SummaryStatistics collectSummaryStatistics(Long segmentId, Boolean normalize, Integer week) {
+		SummaryStatistics summaryStatistics = new SummaryStatistics(normalize, null);
 		NavigableMap<Fun.Tuple2<Long, Integer>, SegmentStatistics> subMap;
 
-		if(week == null)
-			subMap = statsMap.subMap(new Fun.Tuple2(segmentId, null), true, new Fun.Tuple2(segmentId, Fun.HI), true);
-		else
+		if(week == null){
+			summaryStatistics.add(cumulativeStats.get(segmentId));
+		}
+		else {
 			subMap = statsMap.subMap(new Fun.Tuple2(segmentId, week), true, new Fun.Tuple2(segmentId, week), true);
 
-		for(SegmentStatistics stats : subMap.values()) {
-			summaryStatistics.add(stats);
+			for(SegmentStatistics stats : subMap.values()) {
+				summaryStatistics.add(stats);
+			}
 		}
 
 		return summaryStatistics;
