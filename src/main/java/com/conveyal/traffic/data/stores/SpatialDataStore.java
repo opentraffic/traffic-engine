@@ -22,6 +22,9 @@ public class SpatialDataStore {
 
 	String dataFile;
 
+	IdStore spatialId;
+
+
 	/** <<patternId, calendarId>, trip id> */
 	public NavigableSet<Tuple3<Integer, Integer, Long>> tileIndex;
 
@@ -36,6 +39,8 @@ public class SpatialDataStore {
 
 		if(!directory.exists())
 			directory.mkdirs();
+
+		spatialId = new IdStore(directory, dataFile);
 		
 		DBMaker dbm = DBMaker.newFileDB(new File(directory, dataFile + ".db"))
 				.mmapFileEnableIfSupported()
@@ -53,6 +58,10 @@ public class SpatialDataStore {
 
 		tileIndex = db.createTreeSet(dataFile + "_tileIndex")
 				.serializer(BTreeKeySerializer.TUPLE3).makeOrGet();
+	}
+
+	public Long getNextId() {
+		return spatialId.getNextId();
 	}
 
 	public String getStatistics() {

@@ -12,7 +12,6 @@ import org.mapdb.Fun;
 public abstract class  SpatialDataItem implements Serializable {
 
 	private static final long serialVersionUID = 1L;
-	private static AtomicLong nextId = new AtomicLong();
 
 	final public Long id;
 
@@ -42,29 +41,8 @@ public abstract class  SpatialDataItem implements Serializable {
 		}
 	}
 
-	public SpatialDataItem(Geometry geom) {
-		id = newId();
-
-		if(geom.getGeometryType().equals("LineString")) {
-
-			Coordinate coords[] = geom.getCoordinates();
-			lons = new double[coords.length];
-			lats = new double[coords.length];
-
-			for(int i = 0; i < coords.length; i++) {
-				lons[i] = coords[i].x;
-				lats[i] = coords[i].y;
-			}
-		}
-		else {
-			lons = new double[0];
-			lats = new double[0];
-			new Exception("Can't store non LineString geometries.");
-		}
-	}
-
-	public SpatialDataItem(List<GPSPoint> points) {
-		id = newId();
+	public SpatialDataItem(Long id, List<GPSPoint> points) {
+		this.id = id;
 
 		lons = new double[points.size()];
 		lats = new double[points.size()];
@@ -77,7 +55,7 @@ public abstract class  SpatialDataItem implements Serializable {
 		}
 	}
 
-	public SpatialDataItem(long id, Coordinate[] coords) {
+	public SpatialDataItem(Long id, Coordinate[] coords) {
 		this.id = id;
 
 		lons = new double[coords.length];
@@ -89,17 +67,6 @@ public abstract class  SpatialDataItem implements Serializable {
 		}
 	}
 
-	public SpatialDataItem(Coordinate[] coords) {
-		id = newId();
-
-		lons = new double[coords.length];
-		lats = new double[coords.length];
-
-		for(int i = 0; i < coords.length; i++) {
-			lons[i] = coords[i].x;
-			lats[i] = coords[i].y;
-		}
-	}
 
 	public Fun.Tuple3<Integer, Integer, Long>[] getTiles(int zIndex) {
 
@@ -160,10 +127,6 @@ public abstract class  SpatialDataItem implements Serializable {
 	public Geometry getGeometry() {
 
 		return new GeometryFactory().createLineString(getCoordinates());
-	}
-
-	public static long newId() {
-		return nextId.incrementAndGet();
 	}
 	
 }

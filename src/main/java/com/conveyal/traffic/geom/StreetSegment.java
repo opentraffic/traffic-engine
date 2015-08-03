@@ -6,6 +6,7 @@ import java.util.UUID;
 
 import com.conveyal.osmlib.Way;
 import com.conveyal.traffic.data.SpatialDataItem;
+import com.conveyal.traffic.data.stores.IdStore;
 import com.conveyal.traffic.osm.OSMDataStore;
 import com.conveyal.traffic.osm.OSMUtils;
 import com.vividsolutions.jts.geom.Coordinate;
@@ -37,8 +38,8 @@ public class StreetSegment extends SpatialDataItem {
 
 	final public int streetType;
 	
-	public StreetSegment(Way way, long wayId,long startNodeId, long endNodeId, LineString geometry, double length) {
-		super(SpatialDataItem.newId(), geometry);
+	public StreetSegment(long id, Way way, long wayId,long startNodeId, long endNodeId, LineString geometry, double length) {
+		super(id, geometry);
 
 		this.streetType = getRodwayType(way);
 		this.oneway = isOneWay(way);
@@ -74,20 +75,6 @@ public class StreetSegment extends SpatialDataItem {
 			return false;
 
 		return true;
-	}
-
-	public List<TripLine> generateTripLines() {
-		
-		LengthIndexedLine lengthIndexedLine = new LengthIndexedLine(this.getGeometry());
-		
-		double scale = (lengthIndexedLine.getEndIndex() - lengthIndexedLine.getStartIndex()) / this.length;
-		
-		List<TripLine> tripLines = new ArrayList<TripLine>();
-		
-		tripLines.add(OSMDataStore.createTripLine(this, 1, lengthIndexedLine, (OSMDataStore.INTERSECTION_MARGIN_METERS) * scale, OSMDataStore.INTERSECTION_MARGIN_METERS));
-		tripLines.add(OSMDataStore.createTripLine(this, 2, lengthIndexedLine, ((length - OSMDataStore.INTERSECTION_MARGIN_METERS) * scale), length - OSMDataStore.INTERSECTION_MARGIN_METERS));
-	
-		return tripLines;
 	}
 
 	public void truncateGeometry() {

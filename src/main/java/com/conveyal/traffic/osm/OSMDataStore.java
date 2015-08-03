@@ -6,6 +6,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.*;
 import java.util.Map.Entry;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -73,6 +74,8 @@ public class OSMDataStore {
 	static GeometryFactory geometryFactory = new GeometryFactory();
 
 	private LoadingCache<Long, Geometry> geometryCache;
+
+	public AtomicLong nextId = new AtomicLong();
 
 	private File osmPath;
 	private File dataPath;
@@ -291,7 +294,16 @@ public class OSMDataStore {
 				continue;
 
 			if(segment.length > MIN_SEGMENT_LEN) {
-				List<TripLine> tripLines = segment.generateTripLines();
+
+				LengthIndexedLine lengthIndexedLine = new LengthIndexedLine(segment.getGeometry());
+
+				double scale = (lengthIndexedLine.getEndIndex() - lengthIndexedLine.getStartIndex()) / segment.length;
+
+				List<TripLine> tripLines = new ArrayList<TripLine>();
+
+				tripLines.add(createTripLine(segment, 1, lengthIndexedLine, (OSMDataStore.INTERSECTION_MARGIN_METERS) * scale, OSMDataStore.INTERSECTION_MARGIN_METERS));
+				tripLines.add(createTripLine(segment, 2, lengthIndexedLine, ((segment.length - OSMDataStore.INTERSECTION_MARGIN_METERS) * scale), segment.length - OSMDataStore.INTERSECTION_MARGIN_METERS));
+
 				for(TripLine tripLine : tripLines) {
 					triplineItems.add(tripLine);
 				}
@@ -381,7 +393,7 @@ public class OSMDataStore {
 	 * @param osm
 	 * @return
 	 */
-	private static Set<Long> findIntersections(OSM osm) {
+	private Set<Long> findIntersections(OSM osm) {
 		Set<Long> intersectionNodes = new HashSet<>();
 
 		// link nodes to the ways that visit them
@@ -416,7 +428,7 @@ public class OSMDataStore {
 	 * @param osm	an osm object
 	 * @return	a list of street segments
 	 */
-	private static List<StreetSegment> getStreetSegments(OSM osm){
+	private List<StreetSegment> getStreetSegments(OSM osm){
 		
 		GeometryFactory gf = new GeometryFactory();
 		
@@ -473,13 +485,13 @@ public class OSMDataStore {
  					
 					LineString segmentGeometry = gf.createLineString(segmentCords.toArray(segmentCoordArray));
 
-					StreetSegment streetSegment = new StreetSegment(way, wayId, lastNodeId, nodeId, segmentGeometry, segmentDist);
+					StreetSegment streetSegment = new StreetSegment(this.streetSegments.getNextId(), way, wayId, lastNodeId, nodeId, segmentGeometry, segmentDist);
 					newSegments.add(streetSegment);
 					
 					// create reverse
 					if(!streetSegment.oneway) {
 						LineString reverseSegmentGeometry = (LineString) segmentGeometry.reverse();
-						newSegments.add(new StreetSegment(way, wayId, nodeId, lastNodeId, reverseSegmentGeometry, segmentDist));
+						newSegments.add(new StreetSegment(this.streetSegments.getNextId(), way, wayId, nodeId, lastNodeId, reverseSegmentGeometry, segmentDist));
 					}
 					
 					// reset for next segment
@@ -492,6 +504,26 @@ public class OSMDataStore {
 		}
 
 		return newSegments;
+	}
+
+	public TripLine createTripLine(StreetSegment streetSegment, int triplineIndex, LengthIndexedLine lengthIndexedLine, double lengthIndex, double dist) {
+		double l1Bearing = OSMDataStore.getBearing(lengthIndexedLine, lengthIndex);
+
+		synchronized(OSMDataStore.gc) {
+			Coordinate p1 = lengthIndexedLine.extractPoint(lengthIndex);
+			gc.setStartingGeographicPoint(p1.x, p1.y);
+			gc.setDirection(clampAzimuth(l1Bearing + 90), TRIPLINE_RADIUS);
+			Point2D tlRight = gc.getDestinationGeographicPoint();
+			gc.setDirection(clampAzimuth(l1Bearing - 90), TRIPLINE_RADIUS);
+			Point2D tlLeft = gc.getDestinationGeographicPoint();
+
+			Coordinate[] coords = new Coordinate[2];
+			coords[0] = new Coordinate(tlLeft.getX(), tlLeft.getY());
+			coords[1] = new Coordinate(tlRight.getX(), tlRight.getY());
+
+			TripLine tl = new TripLine(this.triplines.getNextId(), coords, streetSegment.id, triplineIndex, dist);
+			return tl;
+		}
 	}
 
 	/**
@@ -519,25 +551,7 @@ public class OSMDataStore {
 		return false;
 	}
 	
-	public static TripLine createTripLine(StreetSegment streetSegment, int triplineIndex, LengthIndexedLine lengthIndexedLine, double lengthIndex, double dist) {
-		double l1Bearing = OSMDataStore.getBearing(lengthIndexedLine, lengthIndex);
-		
-		synchronized(OSMDataStore.gc) {
-			Coordinate p1 = lengthIndexedLine.extractPoint(lengthIndex);
-			gc.setStartingGeographicPoint(p1.x, p1.y);
-			gc.setDirection(clampAzimuth(l1Bearing + 90), TRIPLINE_RADIUS);
-			Point2D tlRight = gc.getDestinationGeographicPoint();
-			gc.setDirection(clampAzimuth(l1Bearing - 90), TRIPLINE_RADIUS);
-			Point2D tlLeft = gc.getDestinationGeographicPoint();
 
-			Coordinate[] coords = new Coordinate[2];
-			coords[0] = new Coordinate(tlLeft.getX(), tlLeft.getY());
-			coords[1] = new Coordinate(tlRight.getX(), tlRight.getY());
-
-			TripLine tl = new TripLine(coords, streetSegment.id, triplineIndex, dist);
-			return tl;
-		}
-	}
 	private static double getBearing(LengthIndexedLine lil, double index) {
 		double epsilon = 0.000009;
 		double i0, i1;

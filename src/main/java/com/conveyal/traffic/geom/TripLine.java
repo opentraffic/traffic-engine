@@ -15,21 +15,12 @@ public class TripLine extends SpatialDataItem {
 	final public int tripLineIndex; // the tripline along the way
 	final public double dist;
 
-	public TripLine(Coordinate coords[], long segmentId, int tripLineIndex, double dist) {
-		super(coords);
-
-		this.tripLineIndex = tripLineIndex;
-		this.dist = dist;
-		
-		this.segmentId = segmentId;
-	}
-
 	public TripLine(long id, Coordinate coords[], long segmentId, int tripLineIndex, double dist) {
 		super(id, coords);
 
 		this.tripLineIndex = tripLineIndex;
 		this.dist = dist;
-
+		
 		this.segmentId = segmentId;
 	}
 
