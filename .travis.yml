@@ -16,7 +16,7 @@ sudo: false
 
 # deploy maven artifacts from master iff it's not a pull request
 after_success: |
-  if [ $TRAVIS_BRANCH -eq master ] && [ $TRAVIS_PULL_REQUEST -eq false ]; then
+  if [ "$TRAVIS_BRANCH" = "master" ] && [ "$TRAVIS_PULL_REQUEST" = "false" ]; then
     mvn deploy --settings settings.xml
   fi
 
