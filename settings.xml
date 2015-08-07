@@ -1,0 +1,11 @@
+<!-- allow deployment to conveyal maven repository -->
+<settings>
+ <servers>
+   <server>
+     <id>conveyal-maven-repo</id>
+     <!-- environment variables stored encrypted in .travis.yml -->
+     <username>${env.AWS_ACCESS_KEY_ID}</username>
+     <password>${env.AWS_SECRET_ACCESS_KEY}</password>
+   </server>
+ </servers>
+</settings>
