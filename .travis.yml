@@ -17,7 +17,8 @@ sudo: false
 # deploy maven artifacts from master iff it's not a pull request
 after_success: |
   if [ "$TRAVIS_BRANCH" = "master" ] && [ "$TRAVIS_PULL_REQUEST" = "false" ]; then
-    mvn deploy --settings settings.xml
+    \# no need to run tests again
+    mvn deploy --settings settings.xml -DskipTests
   fi
 
 # Save the maven cache to speed up builds
