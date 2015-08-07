@@ -1,15 +1,17 @@
 language: java
 
-# Analyst Stats requires Java 8 and Travis doesn't (yet) support OpenJDK 8
+# Traffic Engine requires Java 8 and Travis doesn't (yet) support OpenJDK 8
 jdk:
   - oraclejdk8
 
 # Run on container based infrastructure (allows caching &c.)
 sudo: false
 
-# deploy maven artifacts
-script:
-  mvn deploy --settings settings.xml
+# deploy maven artifacts from master iff it's not a pull request
+after-success: |
+  if [ $TRAVIS_BRANCH -eq master ] && [ $TRAVIS_PULL_REQUEST -eq false ]; then
+    mvn deploy --settings settings.xml
+  fi
 
 # Save the maven cache to speed up builds
 cache:
