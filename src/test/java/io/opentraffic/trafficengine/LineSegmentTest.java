@@ -1,8 +1,7 @@
-package com.conveyal.trafficengine;
+package io.opentraffic.trafficengine;
 
-import com.conveyal.traffic.geom.LineSegment;
 import com.vividsolutions.jts.geom.Coordinate;
-
+import io.opentraffic.engine.geom.LineSegment;
 import junit.framework.TestCase;
 
 public class LineSegmentTest extends TestCase {
