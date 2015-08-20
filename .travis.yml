@@ -1,0 +1,27 @@
+language: java
+
+# Traffic Engine requires Java 8 and Travis doesn't (yet) support OpenJDK 8
+jdk:
+  - oraclejdk8
+
+# encrypted AWS access/secret keys to allow automated deployment to conveyal maven repo
+env:
+  global:
+    # encrypted AWS access/secret keys to allow automated deployment to conveyal maven repo
+    - secure: "R6SnAYfz5QmN+zvcxTK30Y0oRpN5M7FVlgCfyIgj8OBpv8tvaIdrN+pzvw+DOWgWGEVNw3b2yJYgt1feIUQ4AwQmcLW9O4AAZFSMDxJ/tT8wn3K+jzdmbssZygd6lyvBJkmOkxQJX5n83F5B9LCIrg4cmXMPBuaFaIhMu9EOnyQ="
+    - secure: "ZYusBtEa4yG2rdJHx58SUSynpLPaZKseIwCaBx+vp/EP7qRzvhSo63RK7hhB1GCpMprao5Qym+oGR9DSHnKaYnFSqzCWHG0R1DoiCUr58cjsogaCPiupo713DSH/Dy+SYEhgGVhLFbvErR3eKFgurL+X8cYDJEAu+4JoqYl5GWs="
+
+# Run on container based infrastructure (allows caching &c.)
+sudo: false
+
+# deploy maven artifacts from master iff it's not a pull request
+after_success: |
+  if [ "$TRAVIS_BRANCH" = "master" ] && [ "$TRAVIS_PULL_REQUEST" = "false" ]; then
+    \# no need to run tests again
+    mvn deploy --settings settings.xml -DskipTests
+  fi
+
+# Save the maven cache to speed up builds
+cache:
+  directories:
+    - "$HOME/.m2/repository"
