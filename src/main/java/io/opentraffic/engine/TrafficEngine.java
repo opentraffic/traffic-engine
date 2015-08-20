@@ -24,7 +24,7 @@ public class TrafficEngine {
 
 	public OSMDataStore osmData;
 
-	VehicleStates vehicleState;
+	public VehicleStates vehicleState;
 
 	Envelope engineEnvelope = new Envelope();
 

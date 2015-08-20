@@ -4,6 +4,8 @@ import java.io.Serializable;
 
  public class SpeedSample implements Serializable {
 
+	 private static final long serialVersionUID = 1l;
+
 	 final long segmentId;
 
 	 final long time;

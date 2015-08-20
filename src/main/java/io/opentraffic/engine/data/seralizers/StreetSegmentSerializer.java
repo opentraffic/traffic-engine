@@ -12,6 +12,8 @@ import java.io.Serializable;
 
 public class StreetSegmentSerializer implements Serializer<StreetSegment>, Serializable {
 
+    private static final long serialVersionUID = 1l;
+
     @Override
     public void serialize(DataOutput out, StreetSegment item) throws IOException {
         out.writeLong(item.id);

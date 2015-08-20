@@ -12,6 +12,8 @@ import java.io.Serializable;
 
 public class OffMapTraceSerializer implements Serializer<OffMapTrace>, Serializable {
 
+    private static final long serialVersionUID = 1l;
+
     @Override
     public void serialize(DataOutput out, OffMapTrace item) throws IOException {
         out.writeLong(item.id);

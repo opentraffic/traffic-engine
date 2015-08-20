@@ -151,6 +151,25 @@ public class VehicleStates {
 		}
 	}
 
+	public Integer getVehicleTileCount(Fun.Tuple2<Integer, Integer> tile) {
+		if(tileCount.containsKey(tile))
+			return tileCount.get(tile).get();
+		else
+			return 0;
+	}
+
+	public List<GPSPoint> getVehicleTilePoints(Fun.Tuple2<Integer, Integer> tile) {
+		List<GPSPoint> points = new ArrayList<>();
+
+		if(tileVehicleMap.containsKey(tile)) {
+			for (Long vehicleId : tileVehicleMap.get(tile).keySet()) {
+				points.add(vehicleCache.get(vehicleId).lastPoint);
+			}
+		}
+
+		return points;
+	}
+
 	public void enqueueLocationUpdate(GPSPoint gpsPoint) {
 		while(queuedLocations.get() > 1_000_000) {
 

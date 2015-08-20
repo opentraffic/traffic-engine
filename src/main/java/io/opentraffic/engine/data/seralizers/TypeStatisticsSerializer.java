@@ -12,6 +12,8 @@ import java.io.Serializable;
 
 public class TypeStatisticsSerializer implements Serializer<TypeStatistics>, Serializable {
 
+    private static final long serialVersionUID = 1l;
+
     @Override
     public void serialize(DataOutput out, TypeStatistics stats) throws IOException {
         out.writeLong(stats.sampleCount);

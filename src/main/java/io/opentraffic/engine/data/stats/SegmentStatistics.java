@@ -12,7 +12,7 @@ import java.time.temporal.ChronoUnit;
 
 public class SegmentStatistics implements Serializable {
 
-	private static final long serialVersionUID = -5885621202679850261l;
+	private static final long serialVersionUID = 1l;
 
 	public final static int HOURS_IN_WEEK = 7 * 24;
 	public final static long WEEK_OFFSET = 24 * 60 * 60 * 1000 * 4; // Jan 1, 1970 is a Thursday. Need to offset to Monday

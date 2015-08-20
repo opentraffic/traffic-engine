@@ -11,6 +11,8 @@ import java.io.Serializable;
 
 public class GPSPointSerializer implements Serializer<GPSPoint>, Serializable {
 
+    private static final long serialVersionUID = 1l;
+
     @Override
     public void serialize(DataOutput out, GPSPoint point) throws IOException {
         out.writeLong(point.time);

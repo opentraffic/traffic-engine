@@ -8,6 +8,8 @@ import java.io.*;
 
 public class SegmentStatisticsSerializer implements Serializer<SegmentStatistics>, Serializable {
 
+    private static final long serialVersionUID = 1l;
+
     @Override
     public void serialize(DataOutput out, SegmentStatistics stats) throws IOException {
         /*for(int h = 0; h < SegmentStatistics.HOURS_IN_WEEK; h++) {

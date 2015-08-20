@@ -12,6 +12,8 @@ import java.io.Serializable;
 
 public class TripLineSerializer implements Serializer<TripLine>, Serializable {
 
+    private static final long serialVersionUID = 1l;
+
     @Override
     public void serialize(DataOutput out, TripLine item) throws IOException {
         out.writeLong(item.id);

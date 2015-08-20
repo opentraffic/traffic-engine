@@ -11,6 +11,8 @@ import java.io.Serializable;
 
 public class JumperSerializer implements Serializer<Jumper>, Serializable {
 
+    private static final long serialVersionUID = 1l;
+
     @Override
     public void serialize(DataOutput out, Jumper jumper) throws IOException {
         out.writeLong(jumper.startNodeId);

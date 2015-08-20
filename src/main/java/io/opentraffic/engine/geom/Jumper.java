@@ -13,6 +13,8 @@ import java.util.stream.Stream;
 // an osm jumper that connects network breaks (usually caused by too short segments)
 public class Jumper {
 
+    private static final long serialVersionUID = 1l;
+
     public long startNodeId;
     public long endNodeId;
     public double length;

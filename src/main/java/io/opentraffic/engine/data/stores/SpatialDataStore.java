@@ -215,12 +215,30 @@ public class SpatialDataStore {
 		return new Fun.Tuple2<>(tileX, tileY);
 	}
 
-	public static List<Fun.Tuple2<Integer, Integer>> getInternalTilesForZ(final int x, final int y, int z, int internalZ) {
+	public static List<Fun.Tuple2<Integer, Integer>> getTilesForZ(final int x, final int y, int z, int internalZ) {
 
-		int zScale = internalZ - z + 1;
+		int zScale, newTileX, newTileY;
 
-		int newTileX = x * zScale;
-		int newTileY = y * zScale;
+		if(internalZ < z) {
+			zScale = Math.abs(internalZ - z);
+
+			if(zScale == 0)
+				zScale = 1;
+
+			newTileX = x / zScale;
+			newTileY = y / zScale;
+
+			zScale = 1;
+		}
+		else {
+			zScale = internalZ - z;
+
+			if(zScale == 0)
+				zScale = 1;
+
+			newTileX = x * zScale;
+			newTileY = y * zScale;
+		}
 
 		List<Fun.Tuple2<Integer, Integer>> tiles = new ArrayList<>();
 

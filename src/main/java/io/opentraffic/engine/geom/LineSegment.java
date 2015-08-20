@@ -4,6 +4,8 @@ import com.vividsolutions.jts.geom.Coordinate;
 
 public class LineSegment {
 
+	private static final long serialVersionUID = 1l;
+
 	Coordinate p0;
 	Coordinate p1;
 

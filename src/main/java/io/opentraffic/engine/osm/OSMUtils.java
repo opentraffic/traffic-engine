@@ -31,8 +31,6 @@ import com.vividsolutions.jts.geom.LineString;
 
 public class OSMUtils {
 
-
-
 	static public LineString getLineStringForWay(Way way, OSM osm) {
 		Coordinate[] coords = new Coordinate[way.nodes.length];
 		for (int i = 0; i < coords.length; i++) {

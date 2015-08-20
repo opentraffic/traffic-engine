@@ -165,7 +165,9 @@ public class StatsDataStore {
 		SegmentStatistics cumulativeStats = new SegmentStatistics();
 
 		NavigableMap<Fun.Tuple2<Long, Integer>, SegmentStatistics> subMap = statsMap.subMap(new Fun.Tuple2(id, null), true, new Fun.Tuple2(id, Fun.HI), true);
-		subMap.values().forEach(cumulativeStats::addStats);
+		for(Object stats : subMap.values()) {
+			cumulativeStats.addStats((SegmentStatistics)stats);
+		}
 
 		return cumulativeStats;
 	}
@@ -179,8 +181,8 @@ public class StatsDataStore {
 		else {
 			for(Integer week : weeks) {
 				NavigableMap<Fun.Tuple2<Long, Integer>, SegmentStatistics> subMap = statsMap.subMap(new Fun.Tuple2(segmentId, week), true, new Fun.Tuple2(segmentId, week), true);
-				for(SegmentStatistics stats : subMap.values()) {
-					summaryStatistics.add(stats);
+				for(Object stats : subMap.values()) {
+					summaryStatistics.add((SegmentStatistics)stats);
 				}
 
 			}
@@ -199,8 +201,8 @@ public class StatsDataStore {
 			else {
 				for(Integer week : weeks) {
 					NavigableMap<Fun.Tuple2<Long, Integer>, SegmentStatistics> subMap = statsMap.subMap(new Fun.Tuple2(segmentId, week), true, new Fun.Tuple2(segmentId, week), true);
-					for(SegmentStatistics stats : subMap.values()) {
-						summaryStatistics.add(stats);
+					for(Object stats : subMap.values()) {
+						summaryStatistics.add((SegmentStatistics)stats);
 					}
 
 				}
