@@ -65,8 +65,10 @@ public class OSMDataStore {
 	public StatsDataStore statsDataStore;
 
 	DB db;
-	IdStore osmAreaIds;
+	IdStore osmAreaIds, osmClusterIds;
 	public Map<Fun.Tuple2<Integer, Integer>, OSMArea> osmAreas;
+	public Map<Long, Long> osmAreaClusterMap;
+	public Map<Long, OSMCluster> osmClusters;
 
 	static OffsetCurveBuilder ocb = new OffsetCurveBuilder(new PrecisionModel(), new BufferParameters());
 	static GeometryFactory geometryFactory = new GeometryFactory();
@@ -100,8 +102,14 @@ public class OSMDataStore {
 
 		db = dbm.make();
 
-		DB.BTreeMapMaker maker = db.createTreeMap("osmAreas");
-		osmAreas = maker.makeOrGet();
+		DB.BTreeMapMaker makerArea = db.createTreeMap("osmAreas");
+		osmAreas = makerArea.makeOrGet();
+
+		DB.BTreeMapMaker makerAreaClusterMap = db.createTreeMap("osmClusterAreaMap");
+		osmAreaClusterMap = makerAreaClusterMap.makeOrGet();
+
+		DB.BTreeMapMaker makerClusters = db.createTreeMap("osmClusters");
+		osmClusters = makerClusters.makeOrGet();
 
 		triplines = new SpatialDataStore(this.dataPath, "tripLines", new TripLineSerializer(), cacheSize);
 		streetSegments = new StreetDataStore(this.dataPath, "streets", new StreetSegmentSerializer(), cacheSize);
@@ -110,6 +118,7 @@ public class OSMDataStore {
 		jumperDataStore = new JumperDataStore(this.dataPath);
 
 		osmAreaIds = new IdStore(this.dataPath, "osmAreaIds");
+		osmClusterIds = new IdStore(this.dataPath, "osmClusterIds");
 
 		log.log(Level.INFO, "OSM Tiles Loaded: " + osmAreas.size());
 		log.log(Level.INFO, "streetSegments: " + streetSegments.size());
@@ -149,6 +158,83 @@ public class OSMDataStore {
 		//System.out.println("Off map trace " + trace.startId + " to " + trace.endId + ": " + trace.lats.length + " points");
 	}
 
+
+	public List<OSMCluster> getOSMClusters() {
+
+		if(osmAreaClusterMap.keySet().size() < osmAreas.keySet().size()) {
+			buildOSMClusters();
+		}
+		return new ArrayList(osmClusters.values());
+	}
+
+	public void buildOSMClusters() {
+
+		synchronized (this) {
+			for(OSMArea area : osmAreas.values()) {
+				if(!osmAreaClusterMap.containsKey(area.id)) {
+
+					boolean addedToExistingCluster = false;
+					for(OSMCluster cluster : osmClusters.values()) {
+						if(cluster.bounds.contains(area.env)) {
+
+							cluster.addArea(area);
+							cluster.updateName();
+							addedToExistingCluster = true;
+
+							osmAreaClusterMap.put(area.id, cluster.id);
+							osmClusters.put(cluster.id, cluster);
+
+							break;
+						}
+					}
+
+					if(!addedToExistingCluster) {
+						OSMCluster cluster = new OSMCluster(osmClusterIds.getNextId(), area);
+
+						osmAreaClusterMap.put(area.id, cluster.id);
+						osmClusters.put(cluster.id, cluster);
+					}
+				}
+			}
+
+			boolean mergeCluster;
+
+			do {
+				mergeCluster = false;
+				OSMCluster deletedCluster = null;
+				OSMCluster mergedCluster = null;
+				for(OSMCluster cluster1 : osmClusters.values()) {
+					for(OSMCluster cluster2 : osmClusters.values()) {
+						if(cluster1.id.equals(cluster2.id))
+							continue;
+
+						if(cluster1.overlaps(cluster2) || (cluster1.name != null  && cluster2.name != null && cluster1.name.equals(cluster2.name))) {
+							mergeCluster = true;
+							cluster1.mergeCluster(cluster2);
+
+							osmClusters.put(cluster1.id, cluster1);
+
+							mergedCluster = cluster1;
+							deletedCluster = cluster2;
+
+							break;
+						}
+					}
+
+					if(mergeCluster)
+						break;
+				}
+
+				if(mergedCluster != null) {
+					for(OSMArea area : mergedCluster.osmAreas) {
+						osmAreaClusterMap.put(area.id, mergedCluster.id);
+						osmClusters.remove(deletedCluster.id);
+					}
+				}
+
+			} while(mergeCluster);
+		}
+	}
 
 	public void loadOSMTile(Fun.Tuple2<Integer, Integer> tile) {
 

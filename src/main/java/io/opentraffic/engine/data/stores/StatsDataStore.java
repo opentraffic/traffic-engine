@@ -45,7 +45,7 @@ public class StatsDataStore {
 
 		cumulativeStats = Caffeine
 				.newBuilder()
-				.maximumSize(100_000)
+				.maximumSize(1_000_000)
 				.refreshAfterWrite(60, TimeUnit.MINUTES)
 				.build(id -> loadSegmentStats(id));
 
