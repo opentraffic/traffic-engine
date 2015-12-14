@@ -7,5 +7,8 @@ See traffic-engine-app for a packaged web application for collecting and visuali
 
     $ mvn clean package
     
+###For local testing you might want to `install` into ~/.mvn/ so that traffic-engine-app builds:
+    $ mvn install
+    
 ## run
 
