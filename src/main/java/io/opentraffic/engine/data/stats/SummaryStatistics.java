@@ -9,6 +9,7 @@ import java.util.Set;
 
 public class SummaryStatistics {
 
+    public boolean inferred = false;
 	public boolean normalize;
 	public double count;
 	public double sum;
