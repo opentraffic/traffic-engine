@@ -10,7 +10,7 @@ import org.mapdb.Fun;
 public class StreetSegment extends SpatialDataItem {
 
 	// osm way highway tag values for roadway types
-	static String[] primaryTypes = {"motorway","trunk","primary","primary_link","motorway_link"};
+	static String[] primaryTypes = {"motorway","trunk","primary","primary_link","motorway_link","unclassified"};
 	static String[] secondaryTypes = {"secondary"};
 	static String[] tertiaryTypes = {"tertiary"};
 	static String[] residentialTypes = {"residential"};
@@ -34,7 +34,7 @@ public class StreetSegment extends SpatialDataItem {
 	public StreetSegment(long id, Way way, long wayId,long startNodeId, long endNodeId, LineString geometry, double length) {
 		super(id, geometry);
 
-		this.streetType = getRodwayType(way);
+		this.streetType = getRoadwayType(way);
 		this.oneway = isOneWay(way);
 		
 		this.wayId = wayId;
@@ -89,7 +89,7 @@ public class StreetSegment extends SpatialDataItem {
 				(way.hasTag("junction") && way.getTag("junction").equals("roundabout"));
 	}
 
-	static public int getRodwayType(Way way) {
+	static public int getRoadwayType(Way way) {
 
 		String highwayType = way.getTag("highway");
 
@@ -110,9 +110,9 @@ public class StreetSegment extends SpatialDataItem {
 
 	static public boolean isTrafficEdge(Way way) {
 
-		int type = getRodwayType(way);
+		int type = getRoadwayType(way);
 
-		if(type == TYPE_PRIMARY || type == TYPE_SECONDARY || type == TYPE_TERTIARY || type == TYPE_RESIDENTIAL)
+		if(type == TYPE_PRIMARY || type == TYPE_SECONDARY || type == TYPE_TERTIARY || type == TYPE_RESIDENTIAL || type == TYPE_OTHER)
 			return true;
 		else
 			return false;
