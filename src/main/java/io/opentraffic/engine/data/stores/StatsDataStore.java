@@ -140,7 +140,6 @@ public class StatsDataStore {
 	public void save(SpeedSample speedSample) {
 
 		synchronized (this) {
-            log.info("Saving speed sample: " + speedSample.getSegmentId() + " " + new Date(speedSample.getTime()));
 			int week = SegmentStatistics.getWeekSinceEpoch(speedSample.getTime());
 			int hour = SegmentStatistics.getHourOfWeek(speedSample.getTime());
 

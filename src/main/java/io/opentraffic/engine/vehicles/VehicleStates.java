@@ -11,12 +11,9 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.logging.Logger;
 import java.util.stream.Stream;
 
 public class VehicleStates {
-
-    private static final Logger log = Logger.getLogger( VehicleStates.class.getName());
 
 	public static long VEHICLE_INVALIDATION_TIME = 1000 * 60 * 5; // invalidate empty vehicles in queue after n ms
 	public static int MINIMUM_VEHICLE_COUNT = 10;
@@ -152,8 +149,6 @@ public class VehicleStates {
 
 			lastProcessedLocations = processedLocations.get();
 			lastProcessingCheck = System.currentTimeMillis();
-
-            log.info("vehicle processing rate: " + processingRate);
 		}
 	}
 
