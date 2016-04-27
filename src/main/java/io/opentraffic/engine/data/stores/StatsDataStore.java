@@ -58,7 +58,7 @@ public class StatsDataStore {
 				.asyncWriteFlushDelay(1000)
 				.closeOnJvmShutdown();
 
-	    db = dbm.make();
+		db = dbm.make();
 
 		BTreeMapMaker statsMapMaker = db.createTreeMap("statsMap");
 		statsMap = statsMapMaker
@@ -176,13 +176,13 @@ public class StatsDataStore {
 		SummaryStatistics summaryStatistics = new SummaryStatistics(normalize, hours);
 
 		if(weeks == null || weeks.size() == 0) {
-			summaryStatistics.add(cumulativeStats.get(segmentId));
+			summaryStatistics.add(cumulativeStats.get(segmentId), segmentId);
 		}
 		else {
 			for(Integer week : weeks) {
 				NavigableMap<Fun.Tuple2<Long, Integer>, SegmentStatistics> subMap = statsMap.subMap(new Fun.Tuple2(segmentId, week), true, new Fun.Tuple2(segmentId, week), true);
 				for(Object stats : subMap.values()) {
-					summaryStatistics.add((SegmentStatistics)stats);
+					summaryStatistics.add((SegmentStatistics)stats, segmentId);
 				}
 
 			}
@@ -196,13 +196,13 @@ public class StatsDataStore {
 
 		for(Long segmentId : segmentIds) {
 			if(weeks == null || weeks.size() == 0) {
-				summaryStatistics.add(cumulativeStats.get(segmentId));
+				summaryStatistics.add(cumulativeStats.get(segmentId), segmentId);
 			}
 			else {
 				for(Integer week : weeks) {
 					NavigableMap<Fun.Tuple2<Long, Integer>, SegmentStatistics> subMap = statsMap.subMap(new Fun.Tuple2(segmentId, week), true, new Fun.Tuple2(segmentId, week), true);
 					for(Object stats : subMap.values()) {
-						summaryStatistics.add((SegmentStatistics)stats);
+						summaryStatistics.add((SegmentStatistics)stats, segmentId);
 					}
 
 				}
@@ -216,13 +216,13 @@ public class StatsDataStore {
 		NavigableMap<Fun.Tuple2<Long, Integer>, SegmentStatistics> subMap;
 
 		if(week == null){
-			summaryStatistics.add(cumulativeStats.get(segmentId));
+			summaryStatistics.add(cumulativeStats.get(segmentId), segmentId);
 		}
 		else {
 			subMap = statsMap.subMap(new Fun.Tuple2(segmentId, week), true, new Fun.Tuple2(segmentId, week), true);
 
 			for(SegmentStatistics stats : subMap.values()) {
-				summaryStatistics.add(stats);
+				summaryStatistics.add(stats, segmentId);
 			}
 		}
 
@@ -236,5 +236,5 @@ public class StatsDataStore {
 	public long size() {
 		return statsMap.sizeLong();
 	}
-	
+
 }

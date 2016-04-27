@@ -29,9 +29,12 @@ public class SummaryStatistics {
 			this.hours = hours;
 	}
 
-	public void add(SegmentStatistics segmentStatistics) {
-		stdDevCache = null;
+	public void add(SegmentStatistics segmentStatistics, Long segmentId) {
+			stdDevCache = null;
 		hourStdDevCache = null;
+
+		double segmentCount = 0;
+		double segmentSum = 0;
 
 		for(ShortLongCursor cursor : segmentStatistics.hourSpeedMap) {
 			short bin = cursor.key;
@@ -56,6 +59,13 @@ public class SummaryStatistics {
 
 			count += binCount;
 			sum += speed * binCount;
+
+			segmentCount += binCount;
+			segmentSum += speed * binCount;
+		}
+
+		if(segmentCount > 0) {
+			System.out.println(segmentId + "," + ((segmentSum / segmentCount) * 3.6));
 		}
 	}
 
