@@ -64,9 +64,6 @@ public class SummaryStatistics {
 			segmentSum += speed * binCount;
 		}
 
-		if(segmentCount > 0) {
-			System.out.println(segmentId + "," + ((segmentSum / segmentCount) * 3.6));
-		}
 	}
 
 	public double getMean() {
