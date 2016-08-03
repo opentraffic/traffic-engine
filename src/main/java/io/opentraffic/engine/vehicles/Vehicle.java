@@ -74,7 +74,7 @@ public class Vehicle {
         while (true) {
 
             if(locationQueue.size() > 0){
-                log.info("vehicle update queue size: " + locationQueue.size());
+               // log.info("vehicle update queue size: " + locationQueue.size());
             }
 
             GPSPoint gpsPoint = locationQueue.peek();
