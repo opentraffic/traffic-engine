@@ -9,14 +9,17 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.logging.Logger;
 
 
 public class Vehicle {
 
+    private static final Logger log = Logger.getLogger( Vehicle.class.getName());
+
     // Max vehicle speed. Anything faster is considered noise.
     public static final double MAX_SPEED = 31.0;
     // Max time between two successive GPS fixes from a single vehicle. Anything longer is considered noise.
-    public static final int MAX_GPS_PAIR_DURATION = 20;
+    public static final int MAX_GPS_PAIR_DURATION = 200;
 
     public Fun.Tuple2<Integer, Integer> tile;
 
@@ -69,6 +72,10 @@ public class Vehicle {
     public synchronized long processVehicle() {
         long processedCount = 0l;
         while (true) {
+
+            if(locationQueue.size() > 0){
+               // log.info("vehicle update queue size: " + locationQueue.size());
+            }
 
             GPSPoint gpsPoint = locationQueue.peek();
 

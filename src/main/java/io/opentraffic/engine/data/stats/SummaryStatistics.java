@@ -9,6 +9,7 @@ import java.util.Set;
 
 public class SummaryStatistics {
 
+    public boolean inferred = false;
 	public boolean normalize;
 	public double count;
 	public double sum;
@@ -28,9 +29,12 @@ public class SummaryStatistics {
 			this.hours = hours;
 	}
 
-	public void add(SegmentStatistics segmentStatistics) {
-		stdDevCache = null;
+	public void add(SegmentStatistics segmentStatistics, Long segmentId) {
+			stdDevCache = null;
 		hourStdDevCache = null;
+
+		double segmentCount = 0;
+		double segmentSum = 0;
 
 		for(ShortLongCursor cursor : segmentStatistics.hourSpeedMap) {
 			short bin = cursor.key;
@@ -55,7 +59,11 @@ public class SummaryStatistics {
 
 			count += binCount;
 			sum += speed * binCount;
+
+			segmentCount += binCount;
+			segmentSum += speed * binCount;
 		}
+
 	}
 
 	public double getMean() {

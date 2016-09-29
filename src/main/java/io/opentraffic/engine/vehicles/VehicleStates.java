@@ -1,17 +1,17 @@
 package io.opentraffic.engine.vehicles;
 
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.stream.Stream;
-
 import io.opentraffic.engine.geom.Crossing;
 import io.opentraffic.engine.geom.GPSPoint;
 import io.opentraffic.engine.geom.GPSSegment;
 import io.opentraffic.engine.geom.TripLine;
 import io.opentraffic.engine.osm.OSMDataStore;
 import org.mapdb.Fun;
+
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Stream;
 
 public class VehicleStates {
 
@@ -30,7 +30,6 @@ public class VehicleStates {
 	private Long lastProcessingCheck = null;
 	private double processingRate;
 
-
 	private AtomicLong processedLocations = new AtomicLong();
 	private AtomicLong queuedLocations = new AtomicLong();
 
@@ -39,6 +38,8 @@ public class VehicleStates {
 	private Map<Fun.Tuple2<Integer, Integer>, Map<Long,Boolean>> tileVehicleMap;
 	private Map<Long, Vehicle> vehicleCache;
 	private Map<Long, Long> lastEmptyVehicleUpdateMap;
+
+
 
 
 	public VehicleStates(OSMDataStore osmData, Boolean debug) {
@@ -185,7 +186,6 @@ public class VehicleStates {
 	}
 
 	public void processLocationUpdates() {
-
 		Map<Fun.Tuple2<Integer, Integer>, AtomicInteger> sortedMap = sortByValue(tileCount);
 		for(Fun.Tuple2<Integer, Integer> tile : sortedMap.keySet()) {
 			if(sortedMap.get(tile).get() >= MINIMUM_VEHICLE_COUNT) {
