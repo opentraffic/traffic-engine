@@ -39,11 +39,11 @@
   <repositories>
     <repository>
       <id>conveyal</id>
-      <url>http://maven.conveyal.com/</url>
+      <url>https://maven.conveyal.com/</url>
     </repository>
     <repository>
       <id>geotools</id>
-      <url>http://download.osgeo.org/webdav/geotools/</url>
+      <url>https://download.osgeo.org/webdav/geotools/</url>
     </repository>
   </repositories>
   <dependencies>
